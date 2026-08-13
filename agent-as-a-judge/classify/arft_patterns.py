@@ -9,12 +9,10 @@ with four root-cause pillars (P1 Grounding & Faithfulness, P2 Cognitive Depth &
 Adaptability, P3 Integrity & Alignment, P4 Engineering Robustness) that roll up to a
 single systemic root cause: metacognitive deficit.
 
-⚠️  This is the DOTTED taxonomy (A.1 … X.8). It is NOT interchangeable with the older
-29-leaf UNDOTTED taxonomy (A1 … X6) whose definitions live in
-`../legacy/failure_taxonomy_leaf_guide.md` (no runnable classifier for it ships in this
-repo — it depended on internal corpora this release doesn't include). Codes collide in
-meaning — there `C1` might mean "impl bugs"; here `C.1` means "Circular Validation &
-Shortcut Reliance". Never mix labels from the two systems in one table.
+⚠️  This is the DOTTED taxonomy (A.1 … X.8). If you have an older UNDOTTED taxonomy
+(A1 … X6) lying around, do not mix codes between the two systems in one table — they
+collide in meaning (there `C1` might mean "impl bugs"; here `C.1` means "Circular
+Validation & Shortcut Reliance").
 
 Every module that needs the code list imports it from here. Do not re-declare it.
 """
