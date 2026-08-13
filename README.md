@@ -13,58 +13,47 @@
   <img src="https://img.shields.io/badge/python-3.10%2B-green" alt="Python 3.10+"/>
 </p>
 
-This repository contains the code behind **AutoResearchEval** — a benchmark and diagnostic study
-of *AutoResearch*: LLM agents that carry a study end to end, from an initial hypothesis through
-literature, experiments, and analysis to a written report.
+This repository holds the code behind **AutoResearchEval** — a benchmark and diagnostic study of
+*AutoResearch*: LLM agents that carry a study end to end, from hypothesis to written report.
 
-Existing evaluations score the endpoint, which says whether a run matched a reference but not how
-the agent worked or where it broke. AutoResearchEval instead builds **100 tasks** from published
-frontier science across **seven domains** and the full research lifecycle, runs them as
-autonomous six-stage rollouts under **eight harness–model combinations** (**800 trajectories**),
-and annotates every trajectory at the process level against **ARFT**, the AutoResearch Failure
-Taxonomy — **45 empirically-grounded failure patterns**. The headline finding is that failures
-span every stage but converge on one limitation: agents lack a **metacognitive loop**.
+Endpoint scoring says whether a run matched a reference, not how the agent worked or where it
+broke. AutoResearchEval builds **100 tasks** from published frontier science across **seven
+domains** and the full research lifecycle, runs them as autonomous six-stage rollouts under
+**eight harness–model combinations** (**800 trajectories**), and annotates each trajectory at the
+process level against **ARFT** — the AutoResearch Failure Taxonomy, **45 empirically-grounded
+failure patterns**. Failures span every stage but converge on one limitation: agents lack a
+**metacognitive loop**.
 
 ## Overview
 
 ![Construction, rollout, and evaluation of AutoResearchEval](assets/overview.jpg)
 
-**a — Task construction.** 5,878 candidate papers are parsed into seven fields and filtered to
-100 tasks across seven domains. The agent sees only the query (Premise, Tension); the target
-(KeyClaims, Conclusion) is withheld — so many paths through a task are admissible and none of
-them is the reference path.
+**a — Task construction.** 5,878 candidate papers → seven fields → 100 tasks in seven domains.
+The agent sees only the query (Premise, Tension); the target (KeyClaims, Conclusion) is withheld,
+so many paths are admissible and none is the reference path.
 
-**b — Rollout.** Each task runs once per harness–model pair as a six-stage episode with revision,
-yielding 800 trajectories with all artifacts retained.
+**b — Rollout.** Each task runs once per harness–model pair as a six-stage episode with revision:
+800 trajectories, all artifacts retained.
 
-**c — Diagnosis.** ARFT is induced bottom-up: experts annotate failures in full trajectories,
-group them into patterns, and refine until all agree — 45 patterns under 4 root-cause pillars. A
-judge agent then reviews the full artifact set under a per-stage rubric, anchoring every issue to
-concrete evidence, with a quality checker regenerating weak analyses in a self-healing loop.
+**c — Diagnosis.** ARFT is induced bottom-up — experts annotate full trajectories, group them,
+refine to consensus: 45 patterns under 4 root-cause pillars. A judge agent then reviews the whole
+artifact set under a per-stage rubric, anchoring each issue to concrete evidence, with a quality
+checker regenerating weak analyses.
 
 ## What is in this repository
 
-| Paper component | Code |
+| Directory | Paper component |
 |---|---|
-| Task construction — mine venues, parse the seven fields, filter, author tasks | `adapters/`, `reconstruct/`, `examples/` |
-| Six-stage rollout task packages (`instruction.md`, verifier, rubric) | `examples/materialize_discovery_tasks.py` |
-| Reward harness for target-anchored optimization tasks | `harness/`, `verify/` |
-| Trajectory intermediate representation + SFT export | `ir/`, `export/` |
-| Agent-as-a-judge → `analysis.md` → ARFT classification | [`agent-as-a-judge/`](agent-as-a-judge/README.md) |
-
-| Module | Purpose |
-|---|---|
-| `adapters/` | source ingestion — OpenAlex metadata + bronze/silver/golden tiering, MinerU-parsed paper corpus |
-| `reconstruct/` | seven-field extraction, novelty-move classification, OpenRouter teacher client, held-out ground truth |
-| `harness/` | domain-agnostic rollout environment, recompute oracle/tools, three-dimensional verifier, catalysis-QE plugin |
-| `ir/` | unified trajectory IR + typed action registries (`ir/actions/`) |
-| `export/` | trajectory → SFT/ReAct message export with observation loss masking |
-| `verify/` | MLIP pre-filter physical checks |
+| `adapters/` | source ingestion — OpenAlex metadata + bronze/silver/golden tiering, MinerU paper corpus |
+| `reconstruct/` | seven-field extraction, novelty-move labels, OpenRouter teacher client, held-out gold |
 | `examples/` | pipeline entry points — crawl → mine → export → materialize → roll out |
-| `agent-as-a-judge/` | the two-stage annotator: trajectory → `analysis.md` → ARFT |
+| `harness/` | rollout environment, recompute oracle, reward verifier, catalysis-QE plugin |
+| `ir/`, `export/` | trajectory IR + typed action registries; SFT/ReAct export with loss masking |
+| `verify/` | MLIP pre-filter physics checks |
+| `agent-as-a-judge/` | trajectory → `analysis.md` → ARFT ([README](agent-as-a-judge/README.md)) |
 
-The **task suite and the 800-trajectory annotated corpus are released separately**; this
-repository is the pipeline that produces them. No API keys, data, or model weights are included.
+The task suite and the 800-trajectory annotated corpus ship separately; this repo is the pipeline
+behind them. No API keys, data, or model weights are included.
 
 ## Setup
 
@@ -73,8 +62,8 @@ pip install -r requirements.lock          # pinned, verified-importable versions
 export OPENROUTER_API_KEY=...             # teacher LLM; never commit keys
 ```
 
-Core runtime deps are deliberately tiny (`pydantic` only) so the IR / export / verify core imports
-without a scientific-computing stack. Heavy, source-specific deps are optional extras:
+Core deps are `pydantic` only, so the IR / export / verify core imports without a
+scientific-computing stack. Heavy per-source deps are extras:
 
 ```bash
 pip install -e ".[aiida]"        # AiiDA provenance adapter
@@ -82,16 +71,16 @@ pip install -e ".[mlip]"         # MACE / CHGNet / M3GNet prefilter
 pip install -e ".[atomate2,mp]"  # atomate2 TaskDocs, Materials Project
 ```
 
-`requirements.freeze.txt` is the full transitive freeze (226 packages) of the environment these
-were verified in. `agent-as-a-judge/` installs separately (`httpx`, `pandas`) and needs the
-`claude` CLI authenticated for Stage 1.
+`requirements.freeze.txt` is the full 226-package freeze of the verified environment.
+`agent-as-a-judge/` installs separately (`httpx`, `pandas`) and needs an authenticated `claude`
+CLI for Stage 1.
 
 ## Building tasks from papers
 
-Crawl a corpus and grade it. Tiering is automatic, from OpenAlex signals only — no hand-curated
-journal whitelist: **bronze** (breadth), **silver** (the workhorse for extraction), **golden**
-(elite venue *and* field-leading impact, weighted up downstream). Young papers are graded on
-venue and institution signals; citations only ever promote, never punish recency.
+Crawl and grade a corpus. Tiering is automatic from OpenAlex signals — no hand-curated whitelist:
+**bronze** (breadth), **silver** (the workhorse for extraction), **golden** (elite venue *and*
+field-leading impact, weighted up downstream). Recent papers are graded on venue and institution;
+citations only ever promote.
 
 ```bash
 python examples/crawl_topic_set.py --per-topic 60 --set-name diverse_v1
@@ -99,13 +88,10 @@ python examples/fetch_corpus_pdfs.py --set diverse_v1 --unpaywall --s2 --core
 python examples/discovery_pattern_mine.py --zip corpus.zip     # -> seven fields per paper
 ```
 
-Extraction emits the seven fields per paper — **Premise**, **Tension**, **Motivation**,
-**Method**, **Experiment**, **KeyClaims**, **Conclusion** — plus the novelty move. Two fields
-become the agent's query; **KeyClaims** and **Conclusion** are withheld as ground truth; the
-remaining three drive construction, gating whether a paper can become a runnable task and fixing
-whether it becomes an *open-ended discovery* or a *target-anchored optimization* task.
-
-Then turn extracted patterns into runnable task packages:
+Extraction emits the seven fields plus the novelty move. **Premise** and **Tension** become the
+agent's query; **KeyClaims** and **Conclusion** are withheld as gold; **Motivation**, **Method**,
+and **Experiment** decide whether a paper can become a runnable task and whether it is
+*open-ended discovery* or *target-anchored optimization*.
 
 ```bash
 python examples/export_discovery_tasks.py          # -> discovery_tasks.jsonl
@@ -115,17 +101,15 @@ python examples/materialize_discovery_tasks.py \
 ```
 
 Each task directory holds `instruction.md` (premise + tension, open decision schema, **no gold
-leaked**), a `task.toml`, and the per-paper rubric the verifier scores against. The `v2_af` prompt
-version is the domain-general one carrying the explicit six-stage process — **A** Ideation →
-**B** Retrieval & Synthesis → **C** Execution → **D** Analysis → **E** Writing → **F** Review —
-that the agent must work through; `v1_domain_specific` is kept side by side so instruction
-wordings can be A/B'd on the identical task set.
+leaked**), a `task.toml`, and the per-paper rubric the verifier scores against. `v2_af` is the
+domain-general prompt carrying the six-stage process — **A** Ideation → **B** Retrieval →
+**C** Execution → **D** Analysis → **E** Writing → **F** Review; `v1_domain_specific` stays
+alongside for A/B on the identical task set.
 
 ## Rewards for target-anchored optimization tasks
 
-Open-ended discovery tasks expose no objective, so their rollouts are judged on process. For
-target-anchored optimization tasks, where an explicit metric exists, the repo ships a live-oracle
-rollout whose terminal reward is a real calculation rather than a judgment:
+Open-ended tasks expose no objective and are judged on process. Target-anchored tasks have an
+explicit metric, so the terminal reward can be a real calculation:
 
 ```bash
 python examples/discovery_rollout.py --calc emt              # validate the loop, instant
@@ -144,35 +128,32 @@ The reward is a gate, not a weighted sum:
 reward = correctness × (0.5 + 0.25·significance + 0.25·novelty)
 ```
 
-`correctness ∈ {0,1}` is hard — a re-executed, sane number matching the held-out gold within
-tolerance. A beautiful-but-wrong or un-run rollout scores **0**, so the soft dimensions can only
-*rank* rollouts that already passed; soft-dim hacking cannot mint reward from nothing. The episode
-gate has the same shape: `sane ∧ decisive ∧ valid`, not "produced a number".
+`correctness ∈ {0,1}` is a re-executed number matching the held-out gold within tolerance. Wrong
+or un-run scores **0**, so the soft dimensions only *rank* rollouts that already passed. The
+episode gate has the same shape: `sane ∧ decisive ∧ valid`, not "produced a number".
 
-Two further invariants are encoded as data rather than prose. Nothing is verified until an
-execution check says so: `Trajectory.is_admissible()` returns `verification.passed`, and export
-refuses anything else. And failure branches are first-class — a step with a non-zero exit or a
-correction is flagged `is_failure_branch=True` and *retained*, becoming error→recovery supervision
-in the SFT export rather than being dropped.
+Two further invariants are data, not prose:
 
-`harness/discovery_env.py` imports nothing domain-specific: no ASE, no QE, no chemistry. That
-import-poverty is the structural check that the skeleton (frame a tension → design an experiment →
-read the result → decide if it is resolved) is domain-agnostic; computational catalysis is the
-first plugged-in domain (`harness/domains/catalysis_qe.py`), and a second domain means a new
-oracle, not a new driver.
+- **Nothing is verified until an execution check says so.** `Trajectory.is_admissible()` returns
+  `verification.passed`; export refuses the rest.
+- **Failure branches are kept.** A non-zero exit or a correction is flagged
+  `is_failure_branch=True` and retained as error→recovery supervision in the SFT export.
+
+`harness/discovery_env.py` imports no chemistry at all — the skeleton (frame a tension → design an
+experiment → read the result → decide if it is resolved) is domain-agnostic. Catalysis is the
+first plugin (`harness/domains/catalysis_qe.py`); a second domain means a new oracle, not a new
+driver.
 
 ## Agent-as-a-judge
 
-Many failures leave no trace in the report: the agent claims a result its own code does not
-produce, or describes a method its logs show it never ran. Detecting these requires comparing the
-manuscript against the artifacts. The judge is therefore **artifact-aware** — a fresh,
-zero-history Claude Code session per trajectory with shell access and no network tools, given the
-rollout's complete evidence package (task statement, full execution log, the delivered container
-filesystem, the scorer's real source code, every call the rollout made to the scoring service, and
-read-only ground truth) and required to anchor every finding to a line number, file, or exact
-value. Against three-expert human annotation it reaches **κ = 0.75** at the pattern level and
-**0.83** at the root-cause level, versus 0.53 / 0.62 for a single-call LLM-as-a-judge on the
-transcript alone — the gain is almost entirely recall.
+Many failures leave no trace in the report — a result the code never produced, a method the logs
+never ran — so catching them means checking the manuscript against the artifacts. The judge is
+therefore **artifact-aware**: a fresh, zero-history Claude Code session per trajectory, shell
+access, no network, handed the full evidence package (task statement, execution log, delivered
+filesystem, the scorer's source, every scoring call, read-only gold) and required to anchor every
+finding to a line, file, or value. Against three-expert annotation it reaches **κ = 0.75**
+(pattern) and **0.83** (root cause), versus 0.53 / 0.62 for a single-call LLM-as-a-judge on the
+transcript — almost all of the gain is recall.
 
 ```bash
 # Stage 1 — trajectory -> analysis.md (six-stage critique, claim-by-claim verdicts)
@@ -187,18 +168,16 @@ export ARFT_OPENROUTER_KEY=...
 python3 arft_verify.py       # polarity regression + cross-run Cohen's κ
 ```
 
-A `traj_tools.py` extraction CLI normalizes three rollout-log formats (Claude Code stream-JSON,
-Gemini CLI NDJSON, Codex CLI JSONL) so multi-megabyte logs stay tractable without truncation. An
-automated checker enforces coverage, depth, and anchor density before an analysis is accepted;
-documents that fail are regenerated with gate-specific feedback. Full details — rubric, iron
-rules, cost, outputs — in [`agent-as-a-judge/README.md`](agent-as-a-judge/README.md).
+`traj_tools.py` normalizes three log formats (Claude Code stream-JSON, Gemini CLI NDJSON, Codex
+CLI JSONL), so multi-megabyte logs need no truncation. A checker enforces coverage, depth, and
+anchor density; documents that fail regenerate with gate-specific feedback. Rubric, iron rules,
+cost, and outputs: [`agent-as-a-judge/README.md`](agent-as-a-judge/README.md).
 
 ### ARFT, the label space
 
-The taxonomy Stage 2 classifies against lives in `agent-as-a-judge/classify/arft_patterns.py`
-(source of truth for the code list) and `arft_guide.md` (the operational guide handed to the
-classifier). Its 45 patterns sit on two orthogonal axes — the **stage** where a failure surfaces
-and the **root cause** of why it happens:
+Stage 2's label space lives in `agent-as-a-judge/classify/arft_patterns.py` (the code list) and
+`arft_guide.md` (the classifier's operational guide). Its 45 patterns sit on two axes — the
+**stage** where a failure surfaces, and the **root cause** of why it happens:
 
 | Root-cause pillar | Core failure focus | Patterns |
 |---|---|---|
@@ -212,12 +191,12 @@ Stages: **A** Ideation (6 patterns) · **B** Retrieval (6) · **C** Execution (8
 
 ## Action vocabulary
 
-Two registries under `ir/actions/`, both induced from data (143 GitHub science agents + real
+Two registries under `ir/actions/`, induced from data (143 GitHub science agents + real
 provenance diffs) rather than designed top-down:
 
-- **`registry.json`** — 26 verifier-bound *execution* actions across 12 categories
-  (`build_structure`, `run_dft`, `check_convergence`, `triage_failure`, `train_mlip`, …). Every
-  entry pins a verifier this repo owns: external tools supply the action space, verification is ours.
+- **`registry.json`** — 26 verifier-bound *execution* actions in 12 categories
+  (`build_structure`, `run_dft`, `check_convergence`, `triage_failure`, `train_mlip`, …). Each
+  pins a verifier this repo owns: external tools supply the action space, verification is ours.
 - **`discovery_registry.json`** — 10 atomic *reasoning* moves in three phases (FRAME → PROBE →
   RESOLVE): `survey_consensus`, `identify_tension`, `formulate_question`, `propose_hypothesis`,
   `select_system`, `choose_method`, `run_calculation`, `compare_reference`, `interpret_result`,
@@ -229,7 +208,7 @@ provenance diffs) rather than designed top-down:
 |---|---|
 | `OPENROUTER_API_KEY` | teacher LLM for field extraction and move generation |
 | `ARFT_OPENROUTER_KEY` | agent-as-a-judge Stage 2 classifier |
-| `OPENALEX_API_KEY`, `S2_API_KEY`, `CORE_API_KEY` | corpus crawl and PDF fallback chain (all optional) |
+| `OPENALEX_API_KEY`, `S2_API_KEY`, `CORE_API_KEY` | corpus crawl and PDF fallback chain (optional) |
 | `QE_PW`, `QE_MPIRUN`, `QE_PSEUDO_DIR`, `QE_NP`, `QE_NPOOL` | Quantum ESPRESSO recompute oracle |
 | `MLIP_DEVICE`, `RECOMPUTE_WORKERS` | MLIP prefilter / recompute parallelism |
 | `AAJ_CORPUS_DIR`, `AAJ_OUT_DIR` | agent-as-a-judge corpus and results roots |
