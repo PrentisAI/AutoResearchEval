@@ -10,10 +10,9 @@ the classifier genuinely needs to go read files beyond the analysis itself — i
 a Claude Code session pays for a system prompt, tool definitions, and multi-turn
 re-caching that a plain extraction task doesn't need.
 
-This is a SEPARATE taxonomy from any 29-leaf/undotted classifier you may have lying
-around (`legacy/` in this repo, if you keep the historical docs) — the two code sets
-COLLIDE IN MEANING (there `C1` might mean "impl bugs"; here `C.1` means "circular
-validation"). Never merge their outputs into one table.
+This is a SEPARATE taxonomy from any older 29-leaf/undotted classifier you may have
+lying around — the two code sets COLLIDE IN MEANING (there `C1` might mean "impl bugs";
+here `C.1` means "circular validation"). Never merge their outputs into one table.
 
 Design notes carried over from how this was built and tuned:
   * discover() expects $AAJ_CORPUS_DIR/<model>/<task>/analysis.md (exactly what

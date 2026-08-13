@@ -93,11 +93,6 @@ handed to the classifier — scoring rubric, discrimination rules for easily con
 patterns, and a Do-NOT-label list worth rereading if you retarget this at a different
 kind of trajectory).
 
-An earlier, incompatible 29-leaf taxonomy is kept for reference in `legacy/` — see
-`legacy/README.md` for why it was superseded and why no runnable classifier ships for
-it. **Never mix codes between the two systems**; they collide in meaning (`C1` and
-`C.1` mean different things).
-
 ## Cost
 
 Classifying 800 analyses (8 models × 100 tasks) through the default OpenRouter
