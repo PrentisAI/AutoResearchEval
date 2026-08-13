@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Secrets — never commit a real key
+.env
+.env.*
+*.key
+!*.key.example
+
+# Runtime data — this is a bring-your-own-corpus tool; generated corpora and
+# results are working data, not source
+generate/corpus/
+generate/_ws/
+classify/corpus/
+classify/results/
+classify/_ws_arft/
+
+# OS/editor cruft
+.DS_Store
+*.swp
