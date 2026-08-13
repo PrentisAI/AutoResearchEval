@@ -16,7 +16,7 @@ Output (examples/output/discovery_patterns/):
   SUMMARY.md                 human-readable map for manual review (breadth phase)
 
 Run:
-  /home/ubuntu/miniconda3/envs/scicoder/bin/python examples/discovery_pattern_mine.py \
+  python examples/discovery_pattern_mine.py \
       [--zip co_pt_corpus.zip] [--limit N] [--no-aggregate]
 """
 
@@ -31,18 +31,19 @@ from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-sys.path.insert(0, "/data/xmyu/scicoder")
+REPO = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO))
 
 from adapters.paper_corpus import PaperCorpus
 from reconstruct.discovery_pattern import DiscoveryPattern, aggregate, extract_pattern, to_dict
 from reconstruct.llm_openrouter import OpenRouterClient
 
-OUTDIR = Path("/data/xmyu/scicoder/examples/output/discovery_patterns")
+OUTDIR = REPO / "examples/output/discovery_patterns"
 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--zip", default="/data/xmyu/scicoder/co_pt_corpus.zip")
+    ap.add_argument("--zip", default=str(REPO / "co_pt_corpus.zip"))
     ap.add_argument("--limit", type=int, default=None, help="extract only the first N papers (quick test)")
     ap.add_argument("--no-aggregate", action="store_true")
     ap.add_argument("--force", action="store_true", help="re-extract papers whose JSON already exists")

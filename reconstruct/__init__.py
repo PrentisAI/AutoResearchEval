@@ -4,25 +4,20 @@ All take a pluggable ``base.LLMClient`` and respect the keep-if-correct (§1.2)
 and provenance (§11) invariants. Pipeline position: IR → **reconstruct** →
 verify → filter → export.
 
-  thought_completion  — fill implicit thoughts (PC Agent-E)
-  humpback_backtranslate — infer task/goal, self-curate (keep score==5)
-  star_rationalize    — hint with answer, KEEP only if re-execution agrees
-  hindsight_relabel   — failed-at-A → positive-at-B (AgentHER)
+  discovery_pattern    — paper → premise/tension/…/conclusion + key claims
+  discovery_moves      — each abstract discovery move as a prompted function
+  discovery_trajectory — a mined pattern → an agent trajectory
+  paper_gt             — the paper's reported numbers → comparable gold
+  tool_lift            — raw provenance steps → clean agent tool calls
+  llm_openrouter       — the OpenRouter teacher client
+
+Submodules are imported on demand (``from reconstruct.discovery_pattern import …``)
+so the package stays importable without the optional per-source dependencies.
 """
 
-from reconstruct import (
-    hindsight_relabel,
-    humpback_backtranslate,
-    star_rationalize,
-    thought_completion,
-)
 from reconstruct.base import LLMClient, ReconstructLog, gated_reconstruct, stamp_provenance
 
 __all__ = [
-    "thought_completion",
-    "humpback_backtranslate",
-    "star_rationalize",
-    "hindsight_relabel",
     "LLMClient",
     "ReconstructLog",
     "gated_reconstruct",

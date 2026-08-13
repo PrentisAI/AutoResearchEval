@@ -17,8 +17,8 @@ restart episode we:
 
 Finally it writes docs/images/mc2d/README.md (gallery index) linking every material.
 
-Run (needs `scicoder` env + read-only `mc2d` profile; CHGNet on CPU):
-    /home/ubuntu/miniconda3/envs/scicoder/bin/python examples/build_mc2d_gallery.py
+Run (needs the aiida + mlip extras and a read-only `mc2d` profile; CHGNet on CPU):
+    python examples/build_mc2d_gallery.py
 """
 from __future__ import annotations
 

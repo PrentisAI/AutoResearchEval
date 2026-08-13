@@ -236,18 +236,6 @@ provenance diffs) rather than designed top-down:
 
 Keys resolve as: explicit argument → environment → a gitignored `.env` in the repo root.
 
-## Caveats
-
-- Several `examples/` scripts still carry absolute paths from the machine they were developed on
-  (`/data/xmyu/scicoder`, conda interpreter paths). Point them at your checkout before running;
-  the library modules under `ir/`, `reconstruct/`, `harness/`, and `export/` are path-clean.
-- The provenance-reconstruction path does not re-run Quantum ESPRESSO on archived runs — there,
-  `reexecuted` means the archive nodes reload and the trajectory faithfully reproduces the
-  recorded execution, with an MLIP check as the independent physics signal. The `--calc qe`
-  rollout path *does* run real DFT.
-- Extraction output is soft by construction: mined patterns are stored as `pending-soft-verify`
-  and never enter the admissible pool on their own.
-
 ## Citation
 
 The overview figure in `assets/` is the paper's own.

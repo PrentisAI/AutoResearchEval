@@ -26,6 +26,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
 import time
 from pathlib import Path
 
@@ -34,14 +35,15 @@ for _v in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "NUMEXP
     os.environ[_v] = "1"
 
 _REPO = Path(__file__).resolve().parents[1]
-# pw.x / mpirun are env-overridable so a large-cell (TMD/oxide) rollout can point at the
-# GPU build (QE_PW=/home/ubuntu/qe_gpu_build/.../build-gpu/bin/pw.x + the NVHPC mpirun +
-# its LD_LIBRARY_PATH) without code changes (recipe_coverage_expansion Stage 2b). Default
-# = the conda CPU pw.x (the honest, validated path for small cells).
-QE_PW = Path(os.environ.get("QE_PW", "/home/ubuntu/miniconda3/envs/qe/bin/pw.x"))
-QE_MPIRUN = Path(os.environ.get("QE_MPIRUN", "/home/ubuntu/miniconda3/envs/qe/bin/mpirun"))
-PSEUDO_DIR = _REPO / "research/agent_survey/qe_demo/pseudo"
-SCRATCH = _REPO / "research/agent_survey/qe_demo/scratch_co_pt"
+# pw.x / mpirun are env-overridable so a large-cell (TMD/oxide) rollout can point at a
+# GPU build (QE_PW=<qe_gpu_build>/build-gpu/bin/pw.x + the NVHPC mpirun + its
+# LD_LIBRARY_PATH) without code changes (recipe_coverage_expansion Stage 2b). Default
+# = whatever CPU pw.x/mpirun are on PATH (the honest, validated path for small cells).
+QE_PW = Path(os.environ.get("QE_PW") or shutil.which("pw.x") or "pw.x")
+QE_MPIRUN = Path(os.environ.get("QE_MPIRUN") or shutil.which("mpirun") or "mpirun")
+# Pseudos + scratch: repo-relative defaults, overridable so the UPF set can live anywhere.
+PSEUDO_DIR = Path(os.environ.get("QE_PSEUDO_DIR", _REPO / "research/agent_survey/qe_demo/pseudo"))
+SCRATCH = Path(os.environ.get("QE_SCRATCH", _REPO / "research/agent_survey/qe_demo/scratch_co_pt"))
 PSEUDOPOTENTIALS = {
     "Pt": "Pt.pbe-n-kjpaw_psl.1.0.0.UPF",
     "C": "C.pbe-n-kjpaw_psl.1.0.0.UPF",
@@ -56,7 +58,8 @@ SITE_HEIGHT = {"ontop": 1.85, "fcc": 1.35}
 def _espresso(directory, kpts, ecutwfc, ecutrho, np_ranks, npool, calc="relax"):
     from ase.calculators.espresso import Espresso, EspressoProfile
     if not QE_PW.exists():
-        raise FileNotFoundError(f"pw.x not found at {QE_PW}")
+        raise FileNotFoundError(
+            f"pw.x not found at {QE_PW} — put it on PATH or set QE_PW to the binary")
     SCRATCH.mkdir(parents=True, exist_ok=True)
     Path(directory).mkdir(parents=True, exist_ok=True)
     cmd = f"{QE_MPIRUN} -np {np_ranks} {QE_PW} -npool {npool}"

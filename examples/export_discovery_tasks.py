@@ -27,7 +27,7 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-REPO = Path("/data/from_139/xmyu/scicoder")
+REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
 from reconstruct.discovery_pattern import DiscoveryPattern  # noqa: E402

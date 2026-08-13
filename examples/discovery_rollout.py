@@ -22,11 +22,10 @@ Calc tiers (swap the oracle tier without touching the skeleton):
   --calc mlip   CHGNet universal MLIP — cheap prefilter (§6); not the honest reward → not admissible
   --calc qe     real QE 7.5 PBE-PAW — the honest, admissible reward (minutes/calc, MPI)
 
-Run (scicoder env for emt/mlip plumbing; qe env reaches pw.x for the real reward):
-  PY=/home/ubuntu/miniconda3/envs/scicoder/bin/python
-  $PY examples/discovery_rollout.py --calc emt        # validate the loop (instant)
-  QE_NP=32 QE_NPOOL=4 /home/ubuntu/miniconda3/envs/qe/bin/python \
-      examples/discovery_rollout.py --calc qe          # real, admissible reward
+Run (any env with the base deps for emt/mlip plumbing; --calc qe needs an env that
+reaches pw.x — point QE_PW/QE_MPIRUN at it if they are not on PATH):
+  python examples/discovery_rollout.py --calc emt      # validate the loop (instant)
+  QE_NP=32 QE_NPOOL=4 python examples/discovery_rollout.py --calc qe   # real, admissible reward
 """
 from __future__ import annotations
 
@@ -36,7 +35,8 @@ import os
 import sys
 from pathlib import Path
 
-sys.path.insert(0, "/data/xmyu/scicoder")
+REPO = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO))
 
 from export.to_sft_react import trajectory_to_messages
 from harness.discovery_env import DiscoveryEnv
@@ -45,7 +45,6 @@ from reconstruct.discovery_moves import sanitize_method_spec  # re-exported for 
 from reconstruct.discovery_pattern import DiscoveryPattern
 from reconstruct.llm_openrouter import OpenRouterClient
 
-REPO = Path("/data/xmyu/scicoder")
 PATTERNS_DIR = REPO / "examples/output/discovery_patterns/patterns"
 OUTDIR = REPO / "examples/output/discovery_rollouts"
 

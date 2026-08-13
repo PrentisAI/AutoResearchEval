@@ -34,7 +34,7 @@ import json
 import shutil
 from pathlib import Path
 
-REPO = Path("/data/from_139/xmyu/scicoder")
+REPO = Path(__file__).resolve().parent.parent
 _REWARD_SRC = [  # copied to dataset-root tests/ (shared, self-contained)
     ("examples/discovery_rubric_evaluate.py", "evaluate.py"),
     ("harness/recompute_tools.py", "recompute_tools.py"),

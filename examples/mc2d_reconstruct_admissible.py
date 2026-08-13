@@ -23,7 +23,7 @@ Admission gate (encodes ir.Verification.passed = reexecuted ∧ reproduced ∧ �
                            AND reconstructed Thoughts don't leak future outcomes
                            (STaR-style keep-if-correct on the reconstructed reasoning).
 
-Run: /home/ubuntu/miniconda3/envs/scicoder/bin/python examples/mc2d_reconstruct_admissible.py
+Run: python examples/mc2d_reconstruct_admissible.py
 """
 
 
