@@ -171,7 +171,7 @@ python3 arft_verify.py       # polarity regression + cross-run Cohen's κ
 `traj_tools.py` normalizes three log formats (Claude Code stream-JSON, Gemini CLI NDJSON, Codex
 CLI JSONL), so multi-megabyte logs need no truncation. A checker enforces coverage, depth, and
 anchor density; documents that fail regenerate with gate-specific feedback. Rubric, iron rules,
-cost, and outputs: [`agent-as-a-judge/README.md`](agent-as-a-judge/README.md).
+and outputs: [`agent-as-a-judge/README.md`](agent-as-a-judge/README.md).
 
 ### ARFT, the label space
 

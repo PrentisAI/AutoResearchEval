@@ -93,19 +93,15 @@ handed to the classifier — scoring rubric, discrimination rules for easily con
 patterns, and a Do-NOT-label list worth rereading if you retarget this at a different
 kind of trajectory).
 
-## Cost
+## Reasoning budget
 
-Classifying 800 analyses (8 models × 100 tasks) through the default OpenRouter
-executor at `anthropic/claude-sonnet-5` cost **~$283 total** (~$0.35/analysis
-including QA retries). The reasoning-token budget is the main quality lever, not a
-cost knob to shave: disabling reasoning entirely measured **38% recall** against a
-hand-verified reference labelling (missing several genuinely-present patterns);
-`3000` reasoning tokens (`arft_classify_api.py`'s default) measured **81% recall** at
-roughly double the disabled-reasoning cost. Don't reduce it to save money.
+The reasoning-token budget is the main quality lever on Stage 2 — don't turn it down.
+Disabling reasoning entirely measured **38% recall** against a hand-verified reference
+labelling, missing several genuinely-present patterns; `3000` reasoning tokens
+(`arft_classify_api.py`'s default) measured **81% recall**.
 
-Stage 1 (trajectory → analysis.md) is the more expensive stage per-item since it's an
-open-ended authoring task rather than extraction — budget accordingly and use
-`--dry-run` / `--n` to size a pilot before committing to a full run.
+Stage 1 is the heavier stage per item, being open-ended authoring rather than
+extraction. Use `--dry-run` / `--n` to size a pilot before committing to a full run.
 
 ## License
 
