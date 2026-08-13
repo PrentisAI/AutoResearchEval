@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.env
+*.aiida
+/datasets/
+output/
+examples/output/
+*.egg-info/
+.venv/
+venv*/

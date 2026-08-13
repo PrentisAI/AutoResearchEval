@@ -1,0 +1,52 @@
+# requirements.lock — SciCoder data engine
+# CLAUDE.md §1.7: "框架 API 是移动靶" — ALL third-party deps anchored to a
+# version. These are the versions ACTUALLY RESOLVED + INSTALLED in the conda env
+# `scicoder` (python 3.11) and verified importable (`pip check` clean, pytest
+# green). Each adapter repeats its anchor in a module header (CLAUDE.md §11).
+#
+# Env:    conda env `scicoder`  →  /home/ubuntu/miniconda3/envs/scicoder
+# Full transitive freeze (226 pkgs): see requirements.freeze.txt
+# Recreate:  conda create -n scicoder -c conda-forge python=3.11
+#            <env>/bin/pip install -r <this file>   # then re-pin from freeze
+#
+# NOTE on PyTorch: installed CPU build (torch==2.12.0+cpu) — the MLIP prefilter
+# is a cheap screen and CPU is adequate; this also sidesteps Blackwell (B300)
+# CUDA-toolkit/old-MLIP-pin conflicts. For GPU MLIP/MD, install a CUDA torch
+# built for sm_100 (cu128+) and re-verify mace/chgnet/matgl against it.
+#
+# NOTE on click: aiida-core needs click<8.3; matgl→huggingface_hub(1.x)→typer
+# wanted click>=8.4. Resolved by pinning huggingface_hub<1.0 (drops the typer
+# dep), letting click==8.2.1 satisfy aiida. Keep these pins together.
+
+# ---- core ----
+pydantic==2.13.4
+pytest==9.0.3                  # dev
+
+# ---- layer 3: provenance / comp-chem (§4) ----
+pymatgen==2026.5.4
+pymatgen-core==2026.5.18
+emmet-core==0.86.4             # adapters/atomate2_taskdoc.py — TaskDoc schema
+atomate2==0.1.4                # workflow generation (stage-0 PoC)
+custodian==2025.12.14          # adapters/custodian_logs.py — correction JSON is version-dependent
+mp-api==0.46.1                 # adapters/mp_api_tasks.py — Materials Project tasks
+aiida-core==2.8.0              # adapters/aiida_walker.py — DAG traversal (needs PostgreSQL+RabbitMQ for full run)
+
+# ---- experiment tracking (§4) ----
+mlflow==3.12.0                 # adapters/mlflow_wandb.py
+wandb==0.27.0                  # adapters/mlflow_wandb.py
+
+# ---- MLIP prefilter (§6) ----
+torch==2.12.0+cpu              # CPU build — install from https://download.pytorch.org/whl/cpu
+ase==3.28.0
+mace-torch==0.3.16             # verify/mlip_prefilter.py — MACE-MP-0
+chgnet==0.4.2                  # verify/mlip_prefilter.py — bundled pretrained weights (offline)
+matgl==4.0.1                   # verify/mlip_prefilter.py — M3GNet (torch-geometric backend, no DGL)
+
+# ---- conflict-resolution pins (do not bump without re-checking aiida/matgl) ----
+click==8.2.1
+huggingface_hub==0.36.2
+
+# ---- RL-ready downstream (format alignment only; NOT trained here) — §7 ----
+# verl @ git+https://github.com/volcengine/verl@<PIN_COMMIT>   # Agent Loop is alpha — pin commit
+# openrlhf==0.5.7
+# nemo-rl @ git+https://github.com/NVIDIA-NeMo/RL@<PIN_COMMIT>

@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "scicoder-data"
+version = "0.0.1"
+description = "SciCoder data engine: reconstruct + execution-verify agent trajectories from indirect human artifacts (computational chemistry/physics)."
+readme = "README.md"
+requires-python = ">=3.10"
+# Core runtime deps are intentionally minimal. Source-specific heavy deps
+# (aiida-core, emmet-core, mp_api, custodian, mlflow, wandb, MLIP packages)
+# are OPTIONAL extras so the IR / export / verify core stays importable
+# without a full computational-chemistry stack. Versions are pinned in
+# requirements.lock (see CLAUDE.md §1.7, §11).
+dependencies = [
+    "pydantic>=2.0,<3.0",
+]
+
+[project.optional-dependencies]
+aiida = ["aiida-core"]
+atomate2 = ["emmet-core", "atomate2", "pymatgen"]
+mp = ["mp_api"]
+custodian = ["custodian"]
+tracking = ["mlflow", "wandb"]
+mlip = ["mace-torch", "chgnet", "matgl"]
+dev = ["pytest>=7", "pytest-cov"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["ir*", "adapters*", "reconstruct*", "verify*", "filters*", "export*", "harness*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

@@ -1,0 +1,134 @@
+{
+  "_meta": {
+    "purpose": "Atomic DISCOVERY action space — the *reasoning* layer that sits above the 26 verifier-bound EXECUTION actions in registry.json. It models how an incremental scientific discovery unfolds (CLAUDE.md §0.9 discovery→RL, §18). The user's framing: a paper goes background/premise → analyse motivation → sharpen an important question → design the test → analyse the conclusion. These moves make that arc an agent-learnable (s,a,o,r) trajectory. INDUCED-validated: seeded from that arc + the scientific method, then checked for corpus coverage via examples/discovery_trajectory_build.py (escape-hatch rate over the CO/Pt corpus); vocab from data, not top-down (§15.3/§16.1).",
+    "this_is_an_interface_contract": "This registry is the INTERFACE, not the implementation. 'Can the papers be unified under these moves?' validates the interface (coverage/escape-hatch). Each move's `executor` + `verifier` is the implementation we OWN and design ourselves (user 2026-06-15): once built, every move resolves to a real executor (so inference is well-defined — the agent emits the move and something concrete runs/returns) and a deterministic verifier. Until then, trajectories are RECONSTRUCTION (narrated from the paper), pending-soft-verify, NOT admissible. The `executable` field already exposes the split the inference layer must respect: `reasoning` moves are SELF-GENERATED policy steps (no external observation — they belong in the Thought channel) vs `real-tool` moves that an external executor runs and returns an observation the agent could not produce itself.",
+    "relation_to_execution_actions": "Two levels, deliberately separate. Discovery moves are mostly reasoning. The run_calculation move GROUNDS into one execution action in registry.json (run_dft/run_md/...), and the trajectory's terminal reward GROUNDS into the conclusion's recompute_handle — the rigor gate (§0.9 hinge: RL reward = the deterministic gate applied to the model's own move).",
+    "schema": {
+      "id": "canonical snake_case discovery move (the Action.name in ir/trajectory.py)",
+      "phase": "FRAME (background→question) | PROBE (design→execute→compare) | RESOLVE (interpret→conclude)",
+      "expects": "the args the move carries",
+      "produces": "what the observation records after the move",
+      "executable": "real-tool (an external executor runs it, returns an observation) | reasoning (self-generated policy step, no external observation — Thought channel)",
+      "executor": "the runtime that WILL implement this move (we own + design it; '—' for pure reasoning)",
+      "verifier": "the deterministic / soft check on this move's output",
+      "verifiable": "soft | grounds-exec (bridges to an execution action) | recompute-anchor (terminal reward target)"
+    },
+    "loader": "from reconstruct.discovery_trajectory import DISCOVERY_MOVES, MOVE_BY_ID  ·  from ir.actions import DISCOVERY_REGISTRY"
+  },
+  "phases": ["FRAME", "PROBE", "RESOLVE"],
+  "moves": [
+    {
+      "id": "survey_consensus",
+      "phase": "FRAME",
+      "expects": ["consensus"],
+      "produces": "the field's current belief the work takes as given",
+      "executable": "reasoning",
+      "executor": "literature retrieval over the corpus/abstracts (RAG) or grounded reasoning",
+      "verifier": "soft: the stated consensus is traceable to retrieved prior work (not invented)",
+      "verifiable": "soft",
+      "maps_to": "DiscoveryPattern.premise_consensus"
+    },
+    {
+      "id": "identify_tension",
+      "phase": "FRAME",
+      "expects": ["gap"],
+      "produces": "the unsatisfied/untested point — the discovery seed",
+      "executable": "reasoning",
+      "executor": "gap/contrast detection over retrieved prior work, or reasoning",
+      "verifier": "soft: the tension is a real gap, not a restatement of the conclusion (anti-hindsight lint)",
+      "verifiable": "soft",
+      "maps_to": "DiscoveryPattern.tension (the most important field)"
+    },
+    {
+      "id": "formulate_question",
+      "phase": "FRAME",
+      "expects": ["question"],
+      "produces": "one concrete, answerable question",
+      "executable": "reasoning",
+      "executor": "—",
+      "verifier": "soft: the question is answerable by a computation (admits a candidate recompute_handle)",
+      "verifiable": "soft",
+      "maps_to": "DiscoveryPattern.motivation"
+    },
+    {
+      "id": "propose_hypothesis",
+      "phase": "FRAME",
+      "expects": ["hypothesis"],
+      "produces": "a testable candidate answer / mechanism (optional)",
+      "executable": "reasoning",
+      "executor": "—",
+      "verifier": "soft: the hypothesis is falsifiable by the planned calculation",
+      "verifiable": "soft",
+      "maps_to": "derived (often implicit in the paper)"
+    },
+    {
+      "id": "select_system",
+      "phase": "PROBE",
+      "expects": ["system", "conditions"],
+      "produces": "the chosen system/surface/sites/conditions to probe",
+      "executable": "real-tool",
+      "executor": "build_structure (ASE) — instantiate the slab/surface/adsorbate sites",
+      "verifier": "REAL: structure builds with valid geometry/composition/cell",
+      "verifiable": "grounds-exec",
+      "grounds_to": ["build_structure"],
+      "maps_to": "DiscoveryPattern.experiment (setup)"
+    },
+    {
+      "id": "choose_method",
+      "phase": "PROBE",
+      "expects": ["method", "level"],
+      "produces": "the method + level of theory, with justification",
+      "executable": "real-tool",
+      "executor": "write DFT/MD inputs (functional/cutoff/kpoints/U)",
+      "verifier": "REAL: inputs parse (QE/VASP dry-run), parameters self-consistent",
+      "verifiable": "grounds-exec",
+      "grounds_to": ["write_md_inputs", "run_dft"],
+      "maps_to": "DiscoveryPattern.method"
+    },
+    {
+      "id": "run_calculation",
+      "phase": "PROBE",
+      "expects": ["tool", "computes", "target"],
+      "produces": "the computed/measured result the paper reports",
+      "executable": "real-tool",
+      "executor": "run_dft (QE 7.5) / MLIP (MACE, CHGNet) — the real compute",
+      "verifier": "REAL: SCF converged + energy/forces sane (§6 physics gate)",
+      "verifiable": "grounds-exec",
+      "grounds_to": ["run_dft", "run_md", "compute_descriptor", "analyze_dft_output", "relax_structure"],
+      "maps_to": "ir/actions/registry.json execution actions; args.computes = recompute_handle"
+    },
+    {
+      "id": "compare_reference",
+      "phase": "PROBE",
+      "expects": ["reference", "delta"],
+      "produces": "agreement or discrepancy vs experiment / prior value / competing model",
+      "executable": "real-tool",
+      "executor": "recompute the reference / fetch the experimental value + deterministic diff",
+      "verifier": "REAL: |Δ| vs reference within tolerance",
+      "verifiable": "soft",
+      "maps_to": "derived (benchmark step)"
+    },
+    {
+      "id": "interpret_result",
+      "phase": "RESOLVE",
+      "expects": ["reading"],
+      "produces": "what the observation means for the question (no victory claim yet)",
+      "executable": "reasoning",
+      "executor": "—",
+      "verifier": "soft: interpretation is consistent with the computed observation, no over-claim",
+      "verifiable": "soft",
+      "maps_to": "DiscoveryPattern.results discussion"
+    },
+    {
+      "id": "draw_conclusion",
+      "phase": "RESOLVE",
+      "expects": ["claim", "recompute_handle"],
+      "produces": "the terminal claim resolving the tension / updating the belief",
+      "executable": "real-tool",
+      "executor": "the recompute_handle rigor gate on the agent's OWN result (e.g. QE E_ads(atop) vs E_ads(hollow) on Pt(111))",
+      "verifier": "REAL (terminal): deterministic recompute == the RL reward (§0.9 hinge, §18.3)",
+      "verifiable": "recompute-anchor",
+      "maps_to": "DiscoveryPattern.conclusion + key_claims[*].recompute_handle (the rigor reward)"
+    }
+  ]
+}
