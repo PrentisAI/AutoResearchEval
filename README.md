@@ -26,7 +26,7 @@ failure patterns**. Failures span every stage but converge on one limitation: ag
 
 ## Overview
 
-![Construction, rollout, and evaluation of AutoResearchEval](assets/overview.jpg)
+![Construction, rollout, and evaluation of AutoResearchEval](assets/overview.png)
 
 **a — Task construction.** 5,878 candidate papers → seven fields → 100 tasks in seven domains.
 The agent sees only the query (Premise, Tension); the target (KeyClaims, Conclusion) is withheld,
