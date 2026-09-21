@@ -86,6 +86,7 @@ papers ──▶ [ this repo: task construction ] ──▶ tasks ──▶ [ co
 | Path | What it does |
 |---|---|
 | `agent-as-a-judge/generate/` | Stage 1 — one fresh Claude Code session per trajectory writes `analysis.md`, a six-stage critique with claim-by-claim verdicts, plus a quality checker |
+| `agent-as-a-judge/analysis_long.md` | the worked reference analysis Stage 1 hands every session as its depth/structure standard |
 | `agent-as-a-judge/classify/` | Stage 2 — `analysis.md` → ARFT pattern IDs, pattern × model matrices, root-cause rollups, agreement stats |
 | `agent-as-a-judge/classify/arft_patterns.py` | the 45-pattern label space (source of truth) |
 | `agent-as-a-judge/classify/arft_guide.md` | the operational guide handed to the classifier |
@@ -303,6 +304,7 @@ diffs) rather than designed top-down:
 | `OPENROUTER_API_KEY` | teacher LLM for field extraction and move generation |
 | `ARFT_OPENROUTER_KEY` | agent-as-a-judge Stage 2 classifier |
 | `AAJ_CORPUS_DIR`, `AAJ_OUT_DIR` | agent-as-a-judge corpus and results roots |
+| `AAJ_EXEMPLAR` | override the Stage 1 depth exemplar (default `agent-as-a-judge/analysis_long.md`) |
 | `OPENALEX_API_KEY`, `S2_API_KEY`, `CORE_API_KEY` | corpus crawl and PDF fallback chain (optional) |
 | `QE_PW`, `QE_MPIRUN`, `QE_PSEUDO_DIR`, `QE_NP`, `QE_NPOOL` | Quantum ESPRESSO recompute oracle |
 | `MLIP_DEVICE`, `RECOMPUTE_WORKERS` | MLIP prefilter / recompute parallelism |

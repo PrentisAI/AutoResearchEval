@@ -49,6 +49,31 @@ and Codex CLI log shapes are supported out of the box — see `traj_tools.detect
 Writes `<model>/<task_id>/analysis.md` under `./corpus` by default (override with the
 `AAJ_CORPUS_DIR` env var).
 
+### The depth exemplar
+
+Each session is handed two references: `ONBOARDING.md` (the framework — workflow, iron
+rules, required skeleton) and [`analysis_long.md`](analysis_long.md) (a worked example
+of the bar being met). The exemplar is a real analysis of a real trajectory, not a
+template: a microkinetics rollout whose headline finding is refuted by a sweep table the
+agent itself printed. It is what "every issue is a paragraph with a mechanism, a
+fair-credit reading and a numeric anchor, plus a `[stage | root cause]` trailer" looks
+like in practice, and it clears `qa_check_analysis.py` on every gate:
+
+```bash
+# from agent-as-a-judge/
+python3 generate/qa_check_analysis.py analysis_long.md --reason "soft[current_density]"
+```
+
+Point `AAJ_EXEMPLAR` at a different file to calibrate against your own corpus instead.
+If neither exists, the prompt drops the exemplar line and falls back to ONBOARDING §3;
+depth then rests on the QA gate alone, so writing one reference analysis by hand for
+your own domain is worth the effort.
+
+Note what the exemplar depends on: several of its sharpest findings turn on knowing that
+this run's `WebSearch` was a shim while `WebFetch` was real. That is exactly the fact
+`RETRIEVAL_NOTE` carries into your own runs — get it wrong and the analyst will confidently
+make the opposite mistake.
+
 ## Quickstart — Stage 2: analysis.md → ARFT classification
 
 ```bash
@@ -59,7 +84,7 @@ export ARFT_OPENROUTER_KEY=...        # or drop a key in ~/.openrouter_key
 
 Reads `./corpus/<model>/<task>/analysis.md` (`$AAJ_CORPUS_DIR` — the same default
 Stage 1 writes to, so the two stages compose with no extra flags), writes
-per-analysis `classification.json` plus the rolled-up stats to `./results`
+per-analysis `<model>/<task_id>.json` plus the rolled-up stats to `./results`
 (`$AAJ_OUT_DIR`):
 
 | Output | What |

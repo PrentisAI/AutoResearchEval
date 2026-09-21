@@ -174,7 +174,14 @@ def _load_sources(ws):
             t = p.read_text(errors="ignore")
             quotable.append(t)
             artifact.append(t)
-    for name in ("agent_log.jsonl", "agent_log.txt", "gemini_stream.jsonl"):
+    # Every filename traj_tools.LOG_FILENAME can write. `claude_log.jsonl` was missing
+    # here, which silently excluded the majority log format from the quotable set: a
+    # claude-format task whose report.md/decision.json are empty (exactly the
+    # `no_decision` category this checker scales its floors for) then had NO quotable
+    # source at all, so the traceable-quotes gate was unsatisfiable and the task
+    # qa_failed until it hit --max-attempts.
+    for name in ("claude_log.jsonl", "agent_log.jsonl", "agent_log.txt",
+                 "gemini_stream.jsonl"):
         p = ws / name
         if p.exists():
             quotable.append(p.read_text(errors="ignore"))

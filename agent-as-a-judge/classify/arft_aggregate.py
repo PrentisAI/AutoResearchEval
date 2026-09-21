@@ -391,8 +391,10 @@ def main():
     n_unc = write_uncovered(recs, out)
     write_iron_rules(recs, out)
 
-    print(f"[agg45] classified={len(recs)}/800  missing={len(missing)}  "
-          f"labels={len(long_rows)}  uncovered={n_unc}")
+    # Denominator is whatever the corpus actually holds — this is a bring-your-own-
+    # corpus tool, so a hardcoded total would be wrong for every user but one.
+    print(f"[agg45] classified={len(recs)}/{len(recs) + len(missing)}  "
+          f"missing={len(missing)}  labels={len(long_rows)}  uncovered={n_unc}")
     if missing:
         print(f"[agg45] WARNING: {len(missing)} unclassified, e.g. {missing[:5]}")
         print("[agg45] tables above are over the classified subset only.")
