@@ -4,9 +4,9 @@
 why it happens. Every pattern maps to exactly one pillar.
 
 The source of truth for the code list is
-[`classify/arft_patterns.py`](classify/arft_patterns.py); the operational guide handed to
+[`patterns.py`](src/autoresearcheval/patterns.py); the operational guide handed to
 the classifier — scoring rubric, discrimination rules for easily confused patterns, and a
-Do-NOT-label list — is [`classify/arft_guide.md`](classify/arft_guide.md). Reread the
+Do-NOT-label list — is [`arft_guide.md`](src/autoresearcheval/data/arft_guide.md). Reread the
 latter if you retarget this at a different kind of trajectory.
 
 ## Root-cause pillars
@@ -22,7 +22,7 @@ The four pillars roll up to a single systemic root cause: **metacognitive defici
 
 In the per-issue `[stage: <A-F,X> | root cause: <word>]` trailer that every analysis
 carries, the pillars appear as the lowercase words `grounding`, `depth`, `integrity` and
-`robustness` — the mapping is `ROOT_CAUSE_WORD` in `arft_patterns.py`.
+`robustness` — the mapping is `ROOT_CAUSE_WORD` in `patterns.py`.
 
 ## Lifecycle stages
 

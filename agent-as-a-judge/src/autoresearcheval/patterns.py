@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-arft_patterns.py — single source of truth for ARFT, the AutoResearch Failure Taxonomy.
+patterns.py — single source of truth for ARFT, the AutoResearch Failure Taxonomy.
 
 45 patterns (A.1 … X.8): six lifecycle stages (A. Ideation & Planning, B. Retrieval &
 Synthesis, C. Execution & Implementation, D. Analysis & Interpretation, E. Writing &
@@ -193,7 +193,7 @@ PILLARS = {
 PILLAR_ORDER = ["P1", "P2", "P3", "P4"]
 
 # The lowercase single word each pillar maps to in the per-issue `[stage | root
-# cause: <word>]` trailer that ONBOARDING.md §3 and qa_check_analysis.py's gate 6
+# cause: <word>]` trailer that ONBOARDING.md §3 and analysis_qa.py's gate 6
 # require. Kept as an explicit mapping (not derived from PILLARS' names) since the
 # trailer vocabulary is a fixed, separately-specified set of exactly these 4 words.
 ROOT_CAUSE_WORD = {"P1": "grounding", "P2": "depth", "P3": "integrity", "P4": "robustness"}

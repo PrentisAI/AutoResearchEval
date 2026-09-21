@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-arft_classify_cc.py — label each `analysis.md` in your corpus against ARFT, the
+classify_cc.py — label each `analysis.md` in your corpus against ARFT, the
 AutoResearch Failure Taxonomy (A.1 … X.8), one fresh headless Claude Code session per
 analysis, routed through OpenRouter by `run_all_arft_cc.sh`.
 
-Prefer `arft_classify_api.py` (direct OpenRouter completion, no agentic session) unless
+Prefer `classify.py` (direct OpenRouter completion, no agentic session) unless
 the classifier genuinely needs to go read files beyond the analysis itself — it was
 ~3.7x cheaper for identical output when both were measured on the same corpus, because
 a Claude Code session pays for a system prompt, tool definitions, and multi-turn
@@ -16,13 +16,13 @@ here `C.1` means "circular validation"). Never merge their outputs into one tabl
 
 Design notes carried over from how this was built and tuned:
   * discover() expects $AAJ_CORPUS_DIR/<model>/<task>/analysis.md (exactly what
-    ../generate/generate_analysis_cc.py produces by default) — task ids can be
+    Stage 1 (`autoresearcheval.generate`) produces by default) — task ids can be
     anything, not just a fixed prefix pattern.
   * No traj/reward/decision inputs are required. `analysis.md` is expected to be
     self-contained (see ../generate/'s ONBOARDING-conformant output shape, which
     includes a metadata table carrying harness/gold-observable/reward).
   * Sparse output (`hits` / `partials`) rather than 45 inline scores; arft_aggregate.py
-    densifies to a 0/1/2 grid (2=HIT, 1=PARTIAL, 0=miss — see arft_patterns.py for why
+    densifies to a 0/1/2 grid (2=HIT, 1=PARTIAL, 0=miss — see patterns.py for why
     that ordering, not 1/2, is deliberate).
   * --max-turns 14 / --effort medium: this is an extraction task over pre-staged
     inputs, not an investigation, so a much smaller turn budget than an authoring task
@@ -31,7 +31,7 @@ Design notes carried over from how this was built and tuned:
     re-sent every turn — keep the staged workspace small.
 
 Usage (see run_all_arft_cc.sh for the OpenRouter env):
-    python3 arft_classify_cc.py --model-key <model> --resume --concurrency 16 \
+    aaj-classify-cc --model-key <model> --resume --concurrency 16 \
         --model anthropic/claude-sonnet-5
 """
 import argparse
@@ -44,38 +44,28 @@ import sys
 import time
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from functools import lru_cache
 from pathlib import Path
 
-HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE))
-import arft_patterns as P                          # noqa: E402
-import arft_qa_check as qa                         # noqa: E402
+from . import config
+from . import patterns as P
+from . import label_qa as qa
 
 # Bring-your-own-corpus: override with env vars, or just run from the directory where
 # you want ./corpus (input) and ./results (output) to live.
-CORPUS = Path(os.environ.get("AAJ_CORPUS_DIR", "corpus")).resolve()
-OUT_ROOT = Path(os.environ.get("AAJ_OUT_DIR", "results")).resolve()
 
-ARFT_GUIDE = HERE / "arft_guide.md"
 
-# Auto-discovered from whatever model-named subdirectories exist under CORPUS. Empty
-# until you've run Stage 1 (or otherwise populated the corpus) — --model-key will list
-# no valid choices until then, which is the correct signal that there's nothing to do.
-# Underscore-prefixed directories are bookkeeping, not models: Stage 1 writes its run
-# manifests to <corpus>/_batch/, and treating that as a model key made run_all_arft_*.sh
-# spawn a pointless zero-task classification pass over it on every loop.
-MODELS = sorted(p.name for p in CORPUS.iterdir()
-                if p.is_dir() and not p.name.startswith("_")) if CORPUS.exists() else []
 
 INFRA_ERROR_STATUSES = {401, 403, 429, 500, 502, 503, 529}
 
 
+@lru_cache(maxsize=1)
 def source_sets():
     """task_id -> source_set, from an OPTIONAL <corpus>/_MANIFEST.tsv (task_id,
     source_set, ...). Purely a provenance label folded into the aggregate stats —
     harmless to omit; every task_id just gets no source_set tag."""
     out = {}
-    man = CORPUS / "_MANIFEST.tsv"
+    man = config.corpus_dir() / "_MANIFEST.tsv"
     if not man.exists():
         return out
     for line in man.read_text().splitlines()[1:]:
@@ -85,7 +75,6 @@ def source_sets():
     return out
 
 
-SOURCE_SET = source_sets()
 
 
 def find_claude_bin(explicit=None):
@@ -112,21 +101,21 @@ def discover(model_key):
     """Every analysis.md under $AAJ_CORPUS_DIR/<model_key>/<task_id>/.
 
     Task id is the directory name verbatim — no `(desc)` suffix stripping — so this
-    expects the bare-task-id layout Stage 1 (generate_analysis_cc.py) produces.
+    expects the bare-task-id layout Stage 1 (`autoresearcheval.generate`) produces.
     """
     out = []
-    for md in sorted(glob.glob(str(CORPUS / model_key / "*" / "analysis.md"))):
+    for md in sorted(glob.glob(str(config.corpus_dir() / model_key / "*" / "analysis.md"))):
         d = Path(md).parent
         out.append({"task_id": d.name,
                     "analysis_md": md,
-                    "source_set": SOURCE_SET.get(d.name, "unknown")})
+                    "source_set": source_sets().get(d.name, "unknown")})
     return out
 
 
 def _infra_error_status(session_log):
     """HTTP status if the session died on a provider-side failure, else None.
 
-    Ported from generate_analysis_cc.py:237. A transient OpenRouter blip (observed:
+    Ported from `autoresearcheval.generate`. A transient OpenRouter blip (observed:
     every concurrent request 401'ing with "User not found" for minutes, then recovering
     untouched) must not consume the same `attempts` budget as a real content failure.
     """
@@ -150,7 +139,7 @@ def _infra_error_status(session_log):
 
 
 def _prior_attempts(model_key, task_id):
-    man = OUT_ROOT / f"{model_key}_manifest.json"
+    man = config.out_dir() / f"{model_key}_manifest.json"
     if not man.exists():
         return 0
     try:
@@ -247,7 +236,7 @@ When done, self-check with
 
 
 def _model_root(model_key):
-    r = OUT_ROOT / model_key
+    r = config.out_dir() / model_key
     r.mkdir(parents=True, exist_ok=True)
     return r
 
@@ -274,7 +263,7 @@ def run_one(t, args, claude_bin, model_key):
         shutil.rmtree(ws)
     ws.mkdir(parents=True)
     shutil.copy(t["analysis_md"], ws / "analysis.md")
-    shutil.copy(ARFT_GUIDE, ws / "arft_guide.md")
+    shutil.copy(config.arft_guide(), ws / "arft_guide.md")
     (ws / "arft_codes.txt").write_text(P.codes_txt())
     # Deliberately minimal staging: just the analysis, the guide, and the code cheat
     # sheet. Measured: staging a large extra reference file drove cache_read to ~500k
@@ -324,7 +313,7 @@ def run_one(t, args, claude_bin, model_key):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--model-key", required=True, choices=MODELS)
+    ap.add_argument("--model-key", required=True, choices=config.models())
     ap.add_argument("--tasks", default="")
     ap.add_argument("--force-tasks", default="")
     ap.add_argument("--concurrency", type=int, default=8)
@@ -368,8 +357,8 @@ def main():
                   f"{('PROB=' + ';'.join(q.get('problems', []))) if q.get('problems') else ''}",
                   flush=True)
 
-    OUT_ROOT.mkdir(parents=True, exist_ok=True)
-    manp = OUT_ROOT / f"{mk}_manifest.json"
+    config.out_dir().mkdir(parents=True, exist_ok=True)
+    manp = config.out_dir() / f"{mk}_manifest.json"
     prev = json.load(open(manp)) if manp.exists() else {}
     for r in results:
         prev[r["task_id"]] = r

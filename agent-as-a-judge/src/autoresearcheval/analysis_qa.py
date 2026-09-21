@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-qa_check_analysis.py — quality gate for a generated analysis.md.
+analysis_qa.py — quality gate for a generated analysis.md.
 
 Codifies the ONBOARDING.md bar so the driver can decide pass/redo. Six independent
 gate classes, calibrated so no single stage can be a stub and no issue can be padding:
@@ -365,7 +365,7 @@ def check(md_path, reason="", ws=None):
     return res
 
 
-if __name__ == "__main__":
+def main():
     import argparse
     ap = argparse.ArgumentParser()
     ap.add_argument("md_path")
@@ -375,3 +375,7 @@ if __name__ == "__main__":
     r = check(a.md_path, a.reason, a.ws)
     print(json.dumps(r, ensure_ascii=False, indent=2))
     sys.exit(0 if r["ok"] else 1)
+
+
+if __name__ == "__main__":
+    main()

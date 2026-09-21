@@ -39,9 +39,9 @@ import re
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import arft_classify_cc as c   # noqa: E402
-import arft_patterns as P      # noqa: E402
+from . import config
+from . import classify_cc as c  # noqa: F401  (kept: shared helpers)
+from . import patterns as P
 
 # Fabrication-family codes: the ones most at risk from the exculpatory-language trap.
 FABRICATION = ["B.1", "D.6", "E.4"]
@@ -50,7 +50,7 @@ FAB_TERMS = ["fabricat", "hallucinat", "no fabrication", "contaminat"]
 
 def load(root):
     recs = {}
-    for mk in c.MODELS:
+    for mk in config.models():
         for t in c.discover(mk):
             j = Path(root) / mk / f"{t['task_id']}.json"
             if not j.exists():
@@ -169,7 +169,7 @@ def check_kappa(recs, pass2_root, floor):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--root", default=str(c.OUT_ROOT))
+    ap.add_argument("--root", default=str(config.out_dir()))
     ap.add_argument("--prior-agg", default=None,
                     help="optional: path to an earlier agg.json to compare against")
     ap.add_argument("--pass2", default=None)

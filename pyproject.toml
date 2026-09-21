@@ -3,9 +3,13 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "autoresearcheval"
+# The PyPI package `autoresearcheval` is the agent-as-a-judge library, published from
+# agent-as-a-judge/pyproject.toml. This project is the research code around it — task
+# construction, the scoring harness, the trajectory IR — installed locally for
+# development and not published, so it takes a distinct name.
+name = "autoresearcheval-bench"
 version = "0.0.1"
-description = "AutoResearchEval: task construction, scoring scaffolding, and process-level failure diagnosis for autonomous research agents."
+description = "AutoResearchEval benchmark code: task construction, scoring scaffolding, and trajectory IR."
 readme = "README.md"
 requires-python = ">=3.10"
 # Core runtime deps are intentionally minimal. Source-specific heavy deps

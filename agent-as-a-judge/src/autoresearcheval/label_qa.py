@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-arft_qa_check.py — schema + polarity gate for one ARFT classification.json.
+label_qa.py — schema + polarity gate for one ARFT classification.json.
 
 Schema-shaped: it cannot tell a well-evidenced label from a plausible-sounding one.
 It exists to make the self-healing loop converge on outputs that are *parseable and
@@ -11,7 +11,7 @@ One semantic guard is included, because it catches a likely systematic error: a 
 whose evidence points only at `## Credit Due`, the fair-credit section. That is a
 polarity inversion, not a finding.
 
-Usage:  python3 arft_qa_check.py path/to/classification.json
+Usage:  aaj-label-qa path/to/classification.json
 """
 import argparse
 import json
@@ -19,8 +19,7 @@ import re
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import arft_patterns as P  # noqa: E402
+from . import patterns as P
 
 # Evidence must be locatable back into the source analysis.md. This corpus is now
 # English-only (see ONBOARDING.md's fixed skeleton), so the rules below target the

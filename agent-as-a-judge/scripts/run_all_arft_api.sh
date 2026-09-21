@@ -10,7 +10,6 @@
 # ambient OPENROUTER_API_KEY is last on purpose — don't let some other tool's exported
 # key silently get picked up here.
 set -u
-cd "$(dirname "$0")"
 
 KEY="${ARFT_OPENROUTER_KEY:-$(cat ~/.openrouter_key 2>/dev/null)}"
 KEY="${KEY:-${OPENROUTER_API_KEY:-}}"
@@ -21,7 +20,9 @@ if ! KEY="$KEY" python3 - <<'PREFLIGHT'
 import json, os, sys, urllib.request
 k = os.environ["KEY"]
 try:
-    req = urllib.request.Request("https://openrouter.ai/api/v1/key",
+    base = os.environ.get("AAJ_ENDPOINT", "https://openrouter.ai/api/v1/chat/completions")
+    key_url = base.rsplit("/chat/completions", 1)[0] + "/key"
+    req = urllib.request.Request(key_url,
                                  headers={"Authorization": f"Bearer {k}"})
     with urllib.request.urlopen(req, timeout=20) as r:
         d = json.load(r)["data"]
@@ -48,7 +49,7 @@ COMMON="--resume --model $MODEL --concurrency $CONCURRENCY \
 
 # Auto-discovered from whatever model-named subdirectories exist under the corpus
 # (same logic arft_classify_cc.py uses) — no hardcoded model list to keep in sync.
-MODELS="$(python3 -c 'import arft_classify_cc as c; print(" ".join(c.MODELS))')"
+MODELS="$(python3 -c 'from autoresearcheval import config; print(" ".join(config.models()))')"
 if [ -z "$MODELS" ]; then
   echo "no models found under \$AAJ_CORPUS_DIR (default ./corpus) — nothing to classify" >&2
   exit 1
@@ -65,10 +66,10 @@ echo "########## arft classify (api): $MODEL conc=$CONCURRENCY reasoning=$REASON
 for pass in $(seq 1 "$MAX_PASSES"); do
   echo "############### PASS $pass / $MAX_PASSES  $(date) ###############"
   for mk in $MODELS; do
-    python3 arft_classify_api.py --model-key "$mk" $COMMON
+    aaj-classify --model-key "$mk" $COMMON
   done
   echo "----- status after pass $pass -----"
-  if python3 arft_status.py; then
+  if aaj-status; then
     echo "ALL CLASSIFIED after pass $pass  $(date)" | tee "$SENTINEL"
     break
   fi
@@ -76,6 +77,6 @@ for pass in $(seq 1 "$MAX_PASSES"); do
 done
 
 echo "########## EXIT $(date) — aggregating ##########"
-python3 arft_aggregate.py || true
-python3 arft_verify.py || true
-python3 arft_status.py || true
+aaj-aggregate || true
+aaj-verify || true
+aaj-status || true

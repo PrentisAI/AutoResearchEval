@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """
-generate_analysis_cc.py — spawn ONE fresh headless Claude Code session per trajectory
-to produce a comprehensive, ONBOARDING-conformant analysis.md.
+autoresearcheval.generate — Stage 1: spawn ONE fresh headless Claude Code session per
+trajectory to produce a comprehensive, ONBOARDING-conformant analysis.md.
 
-Stage 1 of the two-stage pipeline: raw trajectory log -> structured analysis.md
-(Stage 2, in ../classify/, turns analysis.md into taxonomy classifications).
+Stage 2 (``autoresearcheval.classify``) turns those analyses into ARFT labels.
+
+Library entry point: ``autoresearcheval.generate_analysis()``. CLI: ``aaj-generate``.
 
 Each task:
   1. traj_tools.extract_workspace() -> per-task workspace with decision.json/report.md/
@@ -12,7 +13,7 @@ Each task:
   2. claude -p (fresh session) reads INSTRUCTION.md + ONBOARDING.md + the exemplar,
      deep-dives the log, reruns light code in the workspace, writes analysis.md to
      <corpus>/<model>/<task_id>/analysis.md
-  3. QA gate (qa_check_analysis.py); on fail -> status qa_fail, retried next --resume
+  3. QA gate (analysis_qa.py); on fail -> status qa_fail, retried next --resume
      pass with the QA failure reasons fed back into the prompt.
 
 BEFORE RUNNING FOR REAL: edit RETRIEVAL_NOTE and GOLD_NOTE below to describe your own
@@ -21,12 +22,12 @@ here are TODO placeholders — asserting the wrong thing (e.g. claiming a real W
 tool is a shim when it isn't) would inject a false premise into every analysis.
 
 Usage:
-  python3 generate_analysis_cc.py --run-dir /path/to/your_model__your_suite \
+  aaj-generate --run-dir /path/to/your_model__your_suite \
       --concurrency 4 --resume --model claude-opus-4-8
   # smoke test on 2 tasks:
-  python3 generate_analysis_cc.py --run-dir <...> --tasks task_id_1,task_id_2 --concurrency 2
+  aaj-generate --run-dir <...> --tasks task_id_1,task_id_2 --concurrency 2
   # see what would run without spawning anything:
-  python3 generate_analysis_cc.py --run-dir <...> --dry-run
+  aaj-generate --run-dir <...> --dry-run
 
 Expected --run-dir layout: <run-dir>/traj/*.json, one JSON object per trajectory with
 at least a `task_id` field and a log field traj_tools.detect_format() can recognize
@@ -47,19 +48,12 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-ROOT = HERE.parent                              # repo root (agent-as-a-judge/)
-ONBOARDING = ROOT / "ONBOARDING.md"
-# Depth/structure reference handed to every session. The shipped one is a real
-# analysis of a real trajectory; point AAJ_EXEMPLAR at your own if you'd rather
-# calibrate against your corpus. Missing is tolerated (the prompt drops the line
-# rather than telling the session to Read a path that isn't there).
-EXEMPLAR_LONG = Path(os.environ.get("AAJ_EXEMPLAR") or ROOT / "analysis_long.md")
-CORPUS_DIR = Path(os.environ.get("AAJ_CORPUS_DIR", "corpus")).resolve()
-sys.path.insert(0, str(HERE))
-import traj_tools
-import qa_check_analysis
 
-DEFAULT_WORKROOT = str(HERE / "_ws")
+from . import config
+from . import traj_tools
+from . import analysis_qa
+
+DEFAULT_WORKROOT = str(Path(os.environ.get("AAJ_WORKROOT") or Path.cwd() / "_ws"))
 
 # ---------------------------------------------------------------------------------
 # ADAPT THESE TWO NOTES to your own harness before running for real. They get quoted
@@ -154,9 +148,9 @@ def exemplar_short():
     already accumulated (any existing analysis.md), so later sessions see a
     same-project reference alongside the fixed EXEMPLAR_LONG. Returns None on a
     fresh corpus — the prompt degrades gracefully when there's nothing yet."""
-    if not CORPUS_DIR.exists():
+    if not config.corpus_dir().exists():
         return None
-    for md in sorted(CORPUS_DIR.glob("*/*/analysis.md")):
+    for md in sorted(config.corpus_dir().glob("*/*/analysis.md")):
         return md
     return None
 
@@ -182,9 +176,9 @@ def build_instruction(t, model_key, target_dir, prior_problems=None):
             "- Overwrite the SAME analysis.md — do not create a second directory.\n"
         )
     ex1_line = (
-        f"2. Depth/structure **gold-standard exemplar**: `{EXEMPLAR_LONG}`. Your output's\n"
+        f"2. Depth/structure **gold-standard exemplar**: `{config.exemplar()}`. Your output's\n"
         f"   depth must match it."
-        if EXEMPLAR_LONG.exists() else
+        if config.exemplar().exists() else
         "2. (No depth exemplar available — `ONBOARDING.md` §3 is the bar. Point\n"
         "   `AAJ_EXEMPLAR` at a reference analysis.md to calibrate against one.)")
     ex2 = exemplar_short()
@@ -200,7 +194,7 @@ session analyzes exactly **one** trajectory, standalone — do not assume conclu
 from any other trajectory. You are **fully autonomous**; do not ask questions.
 {strengthen}
 ## 0. Required reading (use the Read tool, read all of it before starting)
-1. Framework: `{ONBOARDING}` — follow its workflow, depth standard, six-stage-plus-X
+1. Framework: `{config.onboarding()}` — follow its workflow, depth standard, six-stage-plus-X
    structure, and its "iron rules" exactly.
 {ex1_line}
 {ex2_line}
@@ -305,7 +299,7 @@ def _infra_error_status(session_log):
 
 def _prior_attempts(model_key, task_id):
     """Accumulated attempt count for a task from the manifest (0 if none)."""
-    man = CORPUS_DIR / "_batch" / f"{model_key}_manifest.json"
+    man = config.corpus_dir() / "_batch" / f"{model_key}_manifest.json"
     if not man.exists():
         return 0
     try:
@@ -317,7 +311,7 @@ def _prior_attempts(model_key, task_id):
 
 def run_one(t, args, claude_bin, model_key):
     task_id = t["task_id"]
-    model_root = CORPUS_DIR / model_key
+    model_root = config.corpus_dir() / model_key
     model_root.mkdir(parents=True, exist_ok=True)
     forced = task_id in args._force_set
     tgt = task_dir(model_root, task_id)
@@ -326,7 +320,7 @@ def run_one(t, args, claude_bin, model_key):
     prior_qa = None
     ws = Path(args.workroot) / model_key / task_id
     if (tgt / "analysis.md").exists():
-        prior_qa = qa_check_analysis.check(tgt / "analysis.md", t["reason"],
+        prior_qa = analysis_qa.check(tgt / "analysis.md", t["reason"],
                                            ws if ws.exists() else None)
         if args.resume and not forced and prior_qa["ok"]:
             return {"task_id": task_id, "status": "skipped", "qa": prior_qa, "dir": str(tgt)}
@@ -349,10 +343,17 @@ def run_one(t, args, claude_bin, model_key):
     prompt = ("Read INSTRUCTION.md in this directory FIRST and follow it completely. "
               "You are fully autonomous; do not ask questions. Produce the analysis.md at the "
               "path INSTRUCTION.md specifies before stopping.")
+    # The session is told to Read the framework and the exemplar by absolute path, so
+    # every directory those live in has to be readable. They are normally the same
+    # packaged data dir, but AAJ_ONBOARDING / AAJ_EXEMPLAR can point anywhere.
+    read_dirs = {str(config.onboarding().parent)}
+    if config.exemplar().exists():
+        read_dirs.add(str(config.exemplar().parent))
+    add_dirs = [a for d in sorted(read_dirs) for a in ("--add-dir", d)]
     cmd = [claude_bin, "--print", "--verbose", "--output-format", "stream-json",
            "--permission-mode", "bypassPermissions", "--max-turns", str(args.max_turns),
            "--model", args.model, "--effort", args.effort,
-           "--add-dir", str(ROOT), "-p", prompt]
+           *add_dirs, "-p", prompt]
     env = os.environ.copy()
     env.setdefault("CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC", "1")
     logf = ws / "session.log"
@@ -379,7 +380,7 @@ def run_one(t, args, claude_bin, model_key):
         return {"task_id": task_id, "status": "failed", "returncode": rc, "dur": dur,
                 "reason": t["reason"], "log_format": t.get("log_format"),
                 "session_log": str(logf), "attempts": prior_attempts + 1}
-    qa = qa_check_analysis.check(md, t["reason"], ws)
+    qa = analysis_qa.check(md, t["reason"], ws)
     return {"task_id": task_id, "status": "done" if qa["ok"] else "qa_fail",
             "returncode": rc, "dur": dur, "reason": t["reason"],
             "log_format": t.get("log_format"), "dir": str(tgt),
@@ -423,7 +424,7 @@ def main():
     if args.n:
         tasks = tasks[:args.n]
 
-    print(f"[gen] run={model_key} corpus={CORPUS_DIR} claude={claude_bin} "
+    print(f"[gen] run={model_key} corpus={config.corpus_dir()} claude={claude_bin} "
           f"model={args.model} concurrency={args.concurrency} tasks={len(tasks)}", flush=True)
     if args.dry_run:
         import collections
@@ -458,7 +459,7 @@ def main():
                   f" chars={q.get('chars','-')} issues={q.get('issues','-')}"
                   f" {('PROB='+';'.join(q.get('problems',[])) ) if q.get('problems') else ''}", flush=True)
 
-    man_dir = CORPUS_DIR / "_batch"
+    man_dir = config.corpus_dir() / "_batch"
     man_dir.mkdir(parents=True, exist_ok=True)
     manifest = man_dir / f"{model_key}_manifest.json"
     prev = json.load(open(manifest)) if manifest.exists() else {}
