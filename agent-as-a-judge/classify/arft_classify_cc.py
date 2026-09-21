@@ -47,7 +47,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-ROOT = HERE.parent                                  # repo root (agent-as-a-judge/)
 sys.path.insert(0, str(HERE))
 import arft_patterns as P                          # noqa: E402
 import arft_qa_check as qa                         # noqa: E402
@@ -57,12 +56,16 @@ import arft_qa_check as qa                         # noqa: E402
 CORPUS = Path(os.environ.get("AAJ_CORPUS_DIR", "corpus")).resolve()
 OUT_ROOT = Path(os.environ.get("AAJ_OUT_DIR", "results")).resolve()
 
-ARFT_GUIDE = ROOT / "arft_guide.md"
+ARFT_GUIDE = HERE / "arft_guide.md"
 
 # Auto-discovered from whatever model-named subdirectories exist under CORPUS. Empty
 # until you've run Stage 1 (or otherwise populated the corpus) — --model-key will list
 # no valid choices until then, which is the correct signal that there's nothing to do.
-MODELS = sorted(p.name for p in CORPUS.iterdir() if p.is_dir()) if CORPUS.exists() else []
+# Underscore-prefixed directories are bookkeeping, not models: Stage 1 writes its run
+# manifests to <corpus>/_batch/, and treating that as a model key made run_all_arft_*.sh
+# spawn a pointless zero-task classification pass over it on every loop.
+MODELS = sorted(p.name for p in CORPUS.iterdir()
+                if p.is_dir() and not p.name.startswith("_")) if CORPUS.exists() else []
 
 INFRA_ERROR_STATUSES = {401, 403, 429, 500, 502, 503, 529}
 
