@@ -19,7 +19,7 @@ Writes  $AAJ_OUT_DIR/
           UNCOVERED.md          mechanisms fitting no code, for taxonomy-gap review
 
 Score encoding (do not change): 2 = HIT, 1 = PARTIAL, 0 = miss. Yes, 2 is the stronger
-value — see the note in arft_patterns.py. Always reference P.SCORE_* rather than literals.
+value — see the note in patterns.py. Always reference P.SCORE_* rather than literals.
 """
 import json
 import sys
@@ -27,11 +27,19 @@ from collections import Counter, defaultdict
 from itertools import combinations
 from pathlib import Path
 
-import pandas as pd
+try:
+    import pandas as pd
+except ModuleNotFoundError as exc:                              # pragma: no cover
+    # pandas is only needed for the corpus-wide rollups, so it is an extra rather than
+    # a hard dependency of a library whose common case is one label_arft() call.
+    raise SystemExit(
+        "aaj-aggregate needs pandas, which ships in the optional 'stats' extra:\n"
+        "    pip install 'autoresearcheval[stats]'"
+    ) from exc
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import arft_classify_cc as c     # noqa: E402
-import arft_patterns as P        # noqa: E402
+from . import config
+from . import classify_cc as c
+from . import patterns as P
 
 HIT, PART = P.SCORE_HIT, P.SCORE_PARTIAL
 
@@ -41,10 +49,10 @@ HIT, PART = P.SCORE_HIT, P.SCORE_PARTIAL
 def load_all():
     """-> (records, long_rows, missing). One record per classified (model, task)."""
     recs, long_rows, missing = [], [], []
-    for mk in c.MODELS:
+    for mk in config.models():
         for t in c.discover(mk):
             tid = t["task_id"]
-            j = c.OUT_ROOT / mk / f"{tid}.json"
+            j = config.out_dir() / mk / f"{tid}.json"
             if not j.exists():
                 missing.append((mk, tid))
                 continue
@@ -93,7 +101,7 @@ def write_agg_json(recs, out):
     hit = {code: sum(1 for r in recs if r["scores"][code] == HIT) for code in P.CODES}
     part = {code: sum(1 for r in recs if r["scores"][code] == PART) for code in P.CODES}
     permodel = {}
-    for mk in c.MODELS:
+    for mk in config.models():
         sub = [r for r in recs if r["model"] == mk]
         permodel[mk] = {
             "n": len(sub),
@@ -119,21 +127,21 @@ def _matrix(recs, key, keys, score):
 
 
 def write_summary(recs, out):
-    hits = _matrix(recs, "model", c.MODELS, HIT)
-    parts = _matrix(recs, "model", c.MODELS, PART)
-    n_per = {mk: sum(1 for r in recs if r["model"] == mk) for mk in c.MODELS}
+    hits = _matrix(recs, "model", config.models(), HIT)
+    parts = _matrix(recs, "model", config.models(), PART)
+    n_per = {mk: sum(1 for r in recs if r["model"] == mk) for mk in config.models()}
 
     L = [f"# 45-pattern failure matrix — {len(recs)} classified analyses\n",
-         f"Models: {', '.join(f'{m}={n_per[m]}' for m in c.MODELS)}\n",
+         f"Models: {', '.join(f'{m}={n_per[m]}' for m in config.models())}\n",
          "Cells are `HIT/PARTIAL` counts. HIT = the analysis presents the failure as "
          "established; PARTIAL = raised but qualified.\n"]
 
     L.append("\n## Pattern × model\n")
-    L.append("| code | name | stage | pillar | " + " | ".join(c.MODELS) + " | ΣHIT | ΣPART | HIT% |")
-    L.append("|---|---|---|---|" + "---|" * (len(c.MODELS) + 3))
+    L.append("| code | name | stage | pillar | " + " | ".join(config.models()) + " | ΣHIT | ΣPART | HIT% |")
+    L.append("|---|---|---|---|" + "---|" * (len(config.models()) + 3))
     tot = len(recs) or 1
     for code in P.CODES:
-        cells = " | ".join(f"{hits.at[code, m]}/{parts.at[code, m]}" for m in c.MODELS)
+        cells = " | ".join(f"{hits.at[code, m]}/{parts.at[code, m]}" for m in config.models())
         sh, sp = int(hits.loc[code].sum()), int(parts.loc[code].sum())
         L.append(f"| {code} | {P.NAME[code]} | {P.STAGE_OF[code]} | {P.PILLAR_OF[code]} | "
                  f"{cells} | **{sh}** | {sp} | {100*sh/tot:.1f}% |")
@@ -149,7 +157,7 @@ def write_summary(recs, out):
     L.append("\n## Per-model load\n")
     L.append("| model | n | ΣHIT | ΣPARTIAL | mean HIT/analysis | severity |")
     L.append("|---|---|---|---|---|---|")
-    for mk in c.MODELS:
+    for mk in config.models():
         sub = [r for r in recs if r["model"] == mk]
         sh = int(hits[mk].sum())
         sp = int(parts[mk].sum())
@@ -184,7 +192,7 @@ def write_root_cause(recs, out):
     for p in P.PILLAR_ORDER:
         L.append(f"- **{p} {P.PILLARS[p][0]}** — {P.PILLARS[p][1]}")
     L += table(recs, "Overall")
-    for mk in c.MODELS:
+    for mk in config.models():
         L += table([r for r in recs if r["model"] == mk], mk)
     (out / "root_cause_stats.md").write_text("\n".join(L) + "\n")
 
@@ -373,7 +381,7 @@ def write_iron_rules(recs, out):
 # ---------------------------------------------------------------- main
 
 def main():
-    out = c.OUT_ROOT
+    out = config.out_dir()
     out.mkdir(parents=True, exist_ok=True)
     recs, long_rows, missing = load_all()
     if not recs:

@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "autoresearcheval"
+version = "0.1.0"
+description = "Process-level failure diagnosis for autonomous research agents: trajectory -> structured analysis -> ARFT failure labels."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "AutoResearchEval authors" }]
+keywords = ["llm", "agents", "evaluation", "failure-taxonomy", "agent-as-a-judge", "arft"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+# Only the corpus-wide rollups need a dataframe library; a single label_arft() call
+# does not, so pandas stays out of the default install.
+stats = ["pandas>=2.0"]
+dev = ["pytest>=7", "build", "twine"]
+
+[project.urls]
+Homepage = "https://github.com/PrentisAI/AutoResearchEval"
+Paper = "https://arxiv.org/abs/2608.14905"
+Source = "https://github.com/PrentisAI/AutoResearchEval/tree/master/agent-as-a-judge"
+
+[project.scripts]
+aaj-generate = "autoresearcheval.generate:main"
+aaj-classify = "autoresearcheval.classify:main"
+aaj-classify-cc = "autoresearcheval.classify_cc:main"
+aaj-aggregate = "autoresearcheval.aggregate:main"
+aaj-status = "autoresearcheval.status:main"
+aaj-verify = "autoresearcheval.verify:main"
+aaj-analysis-qa = "autoresearcheval.analysis_qa:main"
+aaj-label-qa = "autoresearcheval.label_qa:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+# The framework, the depth exemplar and the classifier guide are inputs the code reads
+# at runtime and hands to subprocesses by absolute path, so they must ship in the wheel.
+autoresearcheval = ["data/*.md"]

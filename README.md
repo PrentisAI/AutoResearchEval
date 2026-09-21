@@ -69,7 +69,7 @@ papers ──▶ [ this repo: pipelines/ ] ──▶ tasks ──▶ [ container
 | Area | What it is | Docs |
 |---|---|---|
 | [`pipelines/`](pipelines/) | **papers → tasks** (panel **a**): crawl and tier a corpus, extract the seven fields, materialize runnable task directories | [`pipelines/README.md`](pipelines/README.md) |
-| [`agent-as-a-judge/`](agent-as-a-judge/) | **trajectories → ARFT labels** (panel **c**): the two-stage artifact-aware judge and the 45-pattern taxonomy | [README](agent-as-a-judge/README.md) · [ARFT](agent-as-a-judge/ARFT.md) |
+| [`agent-as-a-judge/`](agent-as-a-judge/) | **trajectories → ARFT labels** (panel **c**): the two-stage artifact-aware judge and the 45-pattern taxonomy, published as [`autoresearcheval`](https://pypi.org/project/autoresearcheval/) on PyPI | [README](agent-as-a-judge/README.md) · [ARFT](agent-as-a-judge/ARFT.md) |
 | [`harness/`](harness/), [`verify/`](verify/) | the rubric scorer, the domain-agnostic episode skeleton, and computational catalysis as the one worked recompute oracle | [`harness/README.md`](harness/README.md) |
 | [`ir/`](ir/), [`export/`](export/) | trajectory IR, the two induced action registries, SFT/ReAct export with loss masking | [`ir/README.md`](ir/README.md) |
 | [`adapters/`](adapters/), [`reconstruct/`](reconstruct/) | library code behind `pipelines/`: OpenAlex + PDF-corpus adapters, the extraction prompts, the OpenRouter teacher client | — |
@@ -105,8 +105,8 @@ pip install -e ".[atomate2,mp]"  # atomate2 TaskDocs, Materials Project
 ```
 
 `requirements.freeze.txt` is the full 226-package freeze of the verified environment.
-`agent-as-a-judge/` installs separately (`httpx`, `pandas`) and needs an authenticated `claude`
-CLI for Stage 1.
+The judge is a separate, published package — `pip install autoresearcheval` — and needs an
+authenticated `claude` CLI for Stage 1.
 
 ## Quickstart
 
@@ -123,20 +123,30 @@ python pipelines/tasks/materialize_discovery_tasks.py \
     --out pipelines/output/discovery_tasks_v6 --prompt-version v6_report_review
 ```
 
-**Trajectories → ARFT labels** — full walkthrough in
-[`agent-as-a-judge/README.md`](agent-as-a-judge/README.md):
+**Trajectories → ARFT labels** — published as the `autoresearcheval` package; full
+walkthrough in [`agent-as-a-judge/README.md`](agent-as-a-judge/README.md):
 
 ```bash
-# Stage 1 — trajectory -> analysis.md (six-stage critique, claim-by-claim verdicts)
-cd agent-as-a-judge/generate/
-python3 generate_analysis_cc.py --run-dir /path/to/your_model__your_suite \
-    --concurrency 4 --resume --model claude-opus-4-8
+pip install autoresearcheval
+```
 
-# Stage 2 — analysis.md -> ARFT labels, matrices, root-cause rollups
-cd ../classify/
+```python
+from autoresearcheval import generate_analysis, label_arft, pattern_info
+
+analysis = generate_analysis(trajectory, retrieval_note=..., gold_note=...)
+result   = label_arft(analysis["analysis"], api_key="sk-...")
+
+for code in result["failure_modes"]:
+    print(code, pattern_info(code)["name"])
+```
+
+Or over a whole corpus, with the batch CLIs the package installs:
+
+```bash
+aaj-generate --run-dir /path/to/your_model__your_suite --concurrency 4 --resume
 export ARFT_OPENROUTER_KEY=...
-./run_all_arft_api.sh        # self-healing: resumes, retries QA failures
-python3 arft_verify.py       # polarity regression + cross-run Cohen's kappa
+agent-as-a-judge/scripts/run_all_arft_api.sh   # self-healing: resumes, retries QA failures
+aaj-verify                                     # polarity regression + cross-run Cohen's kappa
 ```
 
 ## ARFT in one paragraph
@@ -156,7 +166,8 @@ anyway — in 82.5% of analyses. Full label space and per-pillar breakdown:
 | `OPENROUTER_API_KEY` | teacher LLM for field extraction and move generation |
 | `ARFT_OPENROUTER_KEY` | agent-as-a-judge Stage 2 classifier |
 | `AAJ_CORPUS_DIR`, `AAJ_OUT_DIR` | agent-as-a-judge corpus and results roots |
-| `AAJ_EXEMPLAR` | override the Stage 1 depth exemplar (default `agent-as-a-judge/analysis_long.md`) |
+| `AAJ_EXEMPLAR`, `AAJ_ONBOARDING`, `AAJ_GUIDE` | override the packaged Stage 1 exemplar, framework, or Stage 2 guide |
+| `AAJ_ENDPOINT` | OpenAI-compatible chat-completions URL for Stage 2 (default OpenRouter) |
 | `OPENALEX_API_KEY`, `S2_API_KEY`, `CORE_API_KEY` | corpus crawl and PDF fallback chain (optional) |
 | `QE_PW`, `QE_MPIRUN`, `QE_PSEUDO_DIR`, `QE_NP`, `QE_NPOOL` | Quantum ESPRESSO recompute oracle |
 | `MLIP_DEVICE`, `RECOMPUTE_WORKERS` | MLIP prefilter / recompute parallelism |

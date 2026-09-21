@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """
-arft_classify_api.py — same job as arft_classify_cc.py, executed as a single direct
-OpenRouter chat completion instead of a headless Claude Code session.
+autoresearcheval.classify — Stage 2: map one analysis.md onto the 45 ARFT codes with a
+single direct chat completion, instead of a headless Claude Code session.
+
+Library entry point: ``autoresearcheval.label_arft()``. CLI: ``aaj-classify``.
 
 Why both exist: this is an extraction task, not an investigation. The analysis.md
 already contains the evidence; the model only has to map it onto the 45 ARFT codes. A
@@ -9,15 +11,15 @@ Claude Code session pays for a system prompt, tool definitions and multi-turn
 re-caching on every analysis — measured at $0.669 each (cache_creation alone was
 $0.234, and output ran to 16.6k tokens for a JSON of ~19 findings). One-shot
 completion measured far cheaper for identical output. Everything downstream is
-shared: the same `arft_guide.md`, the same `arft_qa_check` gate, the same output
+shared: the same `arft_guide.md`, the same `label_qa` gate, the same output
 paths and manifest, the same `arft_aggregate.py`.
 
-Keep arft_classify_cc.py around: it is the right tool if the task ever needs the model
+Keep ``classify_cc`` around: it is the right tool if the task ever needs the model
 to go read other files (raw trajectories, agent code) rather than just the analysis.
 
 Usage:
     export ARFT_OPENROUTER_KEY=...        # or ~/.openrouter_key
-    python3 arft_classify_api.py --model-key <model> --resume --concurrency 24
+    aaj-classify --model-key <model> --resume --concurrency 24
 """
 import argparse
 import json
@@ -32,17 +34,15 @@ from pathlib import Path
 
 import httpx
 
-HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE))
-import arft_patterns as P        # noqa: E402
-import arft_qa_check as qa       # noqa: E402
-import arft_classify_cc as cc    # noqa: E402  (shared discover/paths/model list)
+from . import config
+from . import patterns as P
+from . import label_qa as qa
+from . import classify_cc as cc   # shared discover()/manifest helpers
 
-MODELS = cc.MODELS
-OUT_ROOT = cc.OUT_ROOT
-ARFT_GUIDE = cc.ARFT_GUIDE
-
-ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
+# Any OpenAI-compatible chat-completions endpoint. Overridable so the classifier can
+# be pointed at another provider, a gateway, or a local server without editing source.
+DEFAULT_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
+ENDPOINT = os.environ.get("AAJ_ENDPOINT") or DEFAULT_ENDPOINT
 RETRY_STATUSES = {408, 409, 429, 500, 502, 503, 504, 529}
 
 _print_lock = threading.Lock()
@@ -275,7 +275,7 @@ def cost_of(usage):
 
 def run_one(t, args, key, guide, model_key, client):
     task_id = t["task_id"]
-    out_root = OUT_ROOT / model_key
+    out_root = config.out_dir() / model_key
     out_root.mkdir(parents=True, exist_ok=True)
     out_json = out_root / f"{task_id}.json"
     forced = task_id in args._force_set
@@ -346,7 +346,7 @@ def run_one(t, args, key, guide, model_key, client):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--model-key", required=True, choices=MODELS)
+    ap.add_argument("--model-key", required=True, choices=config.models())
     ap.add_argument("--tasks", default="")
     ap.add_argument("--force-tasks", default="")
     ap.add_argument("--concurrency", type=int, default=24)
@@ -362,7 +362,7 @@ def main():
     args = ap.parse_args()
 
     key = load_key()
-    guide = ARFT_GUIDE.read_text()
+    guide = config.arft_guide().read_text()
     mk = args.model_key
     args._force_set = set(x for x in args.force_tasks.split(",") if x)
     tasks = cc.discover(mk)
@@ -396,8 +396,8 @@ def main():
                           f"{(' ERR=' + str(r.get('error'))[:90]) if r.get('error') else ''}",
                           flush=True)
 
-    OUT_ROOT.mkdir(parents=True, exist_ok=True)
-    manp = OUT_ROOT / f"{mk}_manifest.json"
+    config.out_dir().mkdir(parents=True, exist_ok=True)
+    manp = config.out_dir() / f"{mk}_manifest.json"
     prev = json.load(open(manp)) if manp.exists() else {}
     for r in results:
         prev[r["task_id"]] = r

@@ -1,10 +1,28 @@
-# agent-as-a-judge
+# autoresearcheval
+
+[![PyPI](https://img.shields.io/pypi/v/autoresearcheval)](https://pypi.org/project/autoresearcheval/)
 
 A two-stage pipeline for turning raw AI-agent research trajectories into a
 structured, evidence-grounded failure-taxonomy classification.
 
 ```
-raw trajectory log  --[Stage 1: generate/]-->  analysis.md  --[Stage 2: classify/]-->  taxonomy stats
+raw trajectory log  --[Stage 1]-->  analysis.md  --[Stage 2]-->  ARFT labels
+```
+
+```python
+from autoresearcheval import generate_analysis, label_arft, pattern_info
+
+analysis = generate_analysis(
+    trajectory,                       # a dict, or a path to one trajectory JSON
+    retrieval_note="WebSearch is a shim here; only WebFetch does real network I/O.",
+    gold_note="No gold values locally — recompute and check internal consistency.",
+)
+
+result = label_arft(analysis["analysis"], api_key="sk-...")
+
+print(result["summary"], result["total_failures"])
+for code in result["failure_modes"]:
+    print(code, pattern_info(code)["name"])
 ```
 
 **Stage 1** spawns one fresh Claude Code session per trajectory to write a deep,
@@ -35,26 +53,56 @@ access is what makes transcript-invisible failures detectable.
 ## Install
 
 ```bash
-pip install -r requirements.txt          # httpx, pandas
+pip install autoresearcheval              # the library and the CLIs
+pip install 'autoresearcheval[stats]'     # adds pandas, needed for the corpus rollups
 ```
 
-- Python 3.10+.
-- **Stage 2's default executor** (`arft_classify_api.py`) needs only an OpenRouter API
-  key (or any OpenAI-compatible endpoint — see `arft_classify_api.py`'s
-  `ENDPOINT`/`load_key`).
-- **Stage 1**, and Stage 2's alternate executor (`arft_classify_cc.py`), spawn headless
+- Python 3.10+. The only hard dependency is `httpx`.
+- **Stage 2** needs an API key for any OpenAI-compatible chat-completions endpoint. Key
+  resolution: the `api_key` argument, then `ARFT_OPENROUTER_KEY`, then
+  `~/.openrouter_key`, then `OPENROUTER_API_KEY`. Point it elsewhere with `base_url=` or
+  the `AAJ_ENDPOINT` env var.
+- **Stage 1**, and Stage 2's alternate executor, spawn headless
   [Claude Code](https://claude.com/product/claude-code) sessions and need the `claude`
   CLI installed and authenticated.
+
+## The two calls
+
+| | What it does | Cost | Needs |
+|---|---|---|---|
+| `generate_analysis(trajectory, ...)` | reads the trajectory's artifacts and writes a six-stage critique with a claim-by-claim verdict table | minutes | the `claude` CLI |
+| `label_arft(analysis, ...)` | maps that critique onto the 45 ARFT codes | one completion | an API key |
+
+They are separate on purpose. Stage 1 is the expensive half, and it produces the
+artifact that makes the labels auditable; folding the two together would hide both.
+
+`generate_analysis` returns `{"task_id", "analysis", "qa", "path", "workspace",
+"duration_s", "returncode"}`. `qa["ok"]` is the depth gate described below — False means
+the analysis came back thinner than the framework's bar, not that the call failed.
+
+`label_arft` returns the classification plus `failure_modes` (every established code),
+`total_failures`, and `qa` (the schema-and-polarity gate). Each hit carries its `code`,
+`name`, `stage`, `pillar`, `root_cause`, `confidence`, `evidence` and `why`.
+
+> **Pass `retrieval_note` and `gold_note`.** They tell the analyst what your harness's
+> retrieval tools actually did and whether gold values are reachable. Omit them and the
+> session is handed a TODO placeholder instead, which injects a false premise into every
+> finding — the call warns when you do.
+
+## Batch CLIs
+
+The commands that produced the paper's corpus install alongside the library:
+`aaj-generate`, `aaj-classify`, `aaj-classify-cc`, `aaj-aggregate`, `aaj-status`,
+`aaj-verify`, `aaj-analysis-qa`, `aaj-label-qa`.
 
 ## Quickstart — Stage 1: trajectory → analysis.md
 
 ```bash
-cd generate/
-# Edit RETRIEVAL_NOTE and GOLD_NOTE at the top of generate_analysis_cc.py first —
-# they describe facts specific to YOUR harness (is WebSearch real or mocked? are
-# gold values available locally?) and ship as TODO placeholders.
+# The library call takes the harness facts as arguments; the batch CLI reads them from
+# RETRIEVAL_NOTE / GOLD_NOTE at the top of autoresearcheval/generate.py, which ship as
+# TODO placeholders. Edit them before a real run.
 
-python3 generate_analysis_cc.py --run-dir /path/to/your_model__your_suite \
+aaj-generate --run-dir /path/to/your_model__your_suite \
     --concurrency 4 --resume --model claude-opus-4-8
 ```
 
@@ -67,17 +115,18 @@ Writes `<model>/<task_id>/analysis.md` under `./corpus` by default (override wit
 
 ### The depth exemplar
 
-Each session is handed two references: `ONBOARDING.md` (the framework — workflow, iron
-rules, required skeleton) and [`analysis_long.md`](analysis_long.md) (a worked example
+Each session is handed two references: [`ONBOARDING.md`](src/autoresearcheval/data/ONBOARDING.md) (the framework — workflow,
+iron rules, required skeleton) and [`analysis_long.md`](src/autoresearcheval/data/analysis_long.md) (a worked example
 of the bar being met). The exemplar is a real analysis of a real trajectory, not a
 template: a microkinetics rollout whose headline finding is refuted by a sweep table the
 agent itself printed. It is what "every issue is a paragraph with a mechanism, a
 fair-credit reading and a numeric anchor, plus a `[stage | root cause]` trailer" looks
-like in practice, and it clears `qa_check_analysis.py` on every gate:
+like in practice, and it clears every gate of the quality checker:
 
 ```bash
-# from agent-as-a-judge/
-python3 generate/qa_check_analysis.py analysis_long.md --reason "soft[current_density]"
+python -c "from autoresearcheval import config; print(config.exemplar())"   # where it lives
+aaj-analysis-qa "$(python -c 'from autoresearcheval import config; print(config.exemplar())')" \
+    --reason "soft[current_density]"
 ```
 
 Point `AAJ_EXEMPLAR` at a different file to calibrate against your own corpus instead.
@@ -93,9 +142,8 @@ make the opposite mistake.
 ## Quickstart — Stage 2: analysis.md → ARFT classification
 
 ```bash
-cd classify/
 export ARFT_OPENROUTER_KEY=...        # or drop a key in ~/.openrouter_key
-./run_all_arft_api.sh                 # self-healing: resumes, retries QA failures
+scripts/run_all_arft_api.sh           # self-healing: resumes, retries QA failures
 ```
 
 Reads `./corpus/<model>/<task>/analysis.md` (`$AAJ_CORPUS_DIR` — the same default
@@ -117,10 +165,10 @@ per-analysis `<model>/<task_id>.json` plus the rolled-up stats to `./results`
 Then check the result is trustworthy before you rely on it:
 
 ```bash
-python3 arft_verify.py   # polarity regression + (optionally) a prior-run comparison
+aaj-verify   # polarity regression + (optionally) a prior-run comparison
 ```
 
-`arft_verify.py` checks that the classifier isn't mistaking exculpatory language for a
+`aaj-verify` checks that the classifier isn't mistaking exculpatory language for a
 finding (a real failure mode — some diagnostic vocabulary shows up almost entirely in
 *clearing* statements in this kind of writeup) and, if you pass `--pass2` against a
 second independent run, reports per-pattern Cohen's κ so you know which codes are
@@ -130,15 +178,15 @@ reliably distinguishable and which need their guide entry sharpened.
 
 The 45-pattern label space, its four root-cause pillars, and what the 800-trajectory
 audit found are documented in [`ARFT.md`](ARFT.md). The code list lives in
-`classify/arft_patterns.py` and the classifier's operational guide in
-`classify/arft_guide.md`.
+`autoresearcheval/patterns.py` and the classifier's operational guide ships as package
+data (`config.arft_guide()`).
 
 ## Reasoning budget
 
 The reasoning-token budget is the main quality lever on Stage 2 — don't turn it down.
 Disabling reasoning entirely measured **38% recall** against a hand-verified reference
 labelling, missing several genuinely-present patterns; `3000` reasoning tokens
-(`arft_classify_api.py`'s default) measured **81% recall**.
+(the `reasoning_tokens` default) measured **81% recall**.
 
 Stage 1 is the heavier stage per item, being open-ended authoring rather than
 extraction. Use `--dry-run` / `--n` to size a pilot before committing to a full run.
