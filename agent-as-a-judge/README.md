@@ -30,7 +30,7 @@ verdict table and independent numerical sanity checks, not a summary.
 
 **Stage 2** classifies each `analysis.md` against **ARFT** (the AutoResearch Failure
 Taxonomy: `A.1`–`X.8`, 45 patterns spanning six lifecycle stages plus a cross-cutting
-layer, rolling up to four root-cause pillars — see [`ARFT.md`](ARFT.md)) and rolls the
+layer, rolling up to four root-cause pillars — see [`ARFT.md`](https://github.com/PrentisAI/AutoResearchEval/blob/master/agent-as-a-judge/ARFT.md)) and rolls the
 results into a pattern × model matrix, a root-cause breakdown, co-occurrence stats, and
 cross-model agreement.
 
@@ -118,8 +118,8 @@ Writes `<model>/<task_id>/analysis.md` under `./corpus` by default (override wit
 
 ### The depth exemplar
 
-Each session is handed two references: [`ONBOARDING.md`](src/autoresearcheval/data/ONBOARDING.md) (the framework — workflow,
-iron rules, required skeleton) and [`analysis_long.md`](src/autoresearcheval/data/analysis_long.md) (a worked example
+Each session is handed two references: [`ONBOARDING.md`](https://github.com/PrentisAI/AutoResearchEval/blob/master/agent-as-a-judge/src/autoresearcheval/data/ONBOARDING.md) (the framework — workflow,
+iron rules, required skeleton) and [`analysis_long.md`](https://github.com/PrentisAI/AutoResearchEval/blob/master/agent-as-a-judge/src/autoresearcheval/data/analysis_long.md) (a worked example
 of the bar being met). The exemplar is a real analysis of a real trajectory, not a
 template: a microkinetics rollout whose headline finding is refuted by a sweep table the
 agent itself printed. It is what "every issue is a paragraph with a mechanism, a
@@ -180,7 +180,7 @@ reliably distinguishable and which need their guide entry sharpened.
 ## Taxonomy
 
 The 45-pattern label space, its four root-cause pillars, and what the 800-trajectory
-audit found are documented in [`ARFT.md`](ARFT.md). The code list lives in
+audit found are documented in [`ARFT.md`](https://github.com/PrentisAI/AutoResearchEval/blob/master/agent-as-a-judge/ARFT.md). The code list lives in
 `autoresearcheval/patterns.py` and the classifier's operational guide ships as package
 data (`config.arft_guide()`).
 
