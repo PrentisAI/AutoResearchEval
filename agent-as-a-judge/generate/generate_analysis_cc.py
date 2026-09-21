@@ -49,7 +49,11 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent                              # repo root (agent-as-a-judge/)
 ONBOARDING = ROOT / "ONBOARDING.md"
-EXEMPLAR_LONG = ROOT / "analysis_long.md"
+# Depth/structure reference handed to every session. The shipped one is a real
+# analysis of a real trajectory; point AAJ_EXEMPLAR at your own if you'd rather
+# calibrate against your corpus. Missing is tolerated (the prompt drops the line
+# rather than telling the session to Read a path that isn't there).
+EXEMPLAR_LONG = Path(os.environ.get("AAJ_EXEMPLAR") or ROOT / "analysis_long.md")
 CORPUS_DIR = Path(os.environ.get("AAJ_CORPUS_DIR", "corpus")).resolve()
 sys.path.insert(0, str(HERE))
 import traj_tools
@@ -177,6 +181,12 @@ def build_instruction(t, model_key, target_dir, prior_problems=None):
             "one-line bullet.\n"
             "- Overwrite the SAME analysis.md — do not create a second directory.\n"
         )
+    ex1_line = (
+        f"2. Depth/structure **gold-standard exemplar**: `{EXEMPLAR_LONG}`. Your output's\n"
+        f"   depth must match it."
+        if EXEMPLAR_LONG.exists() else
+        "2. (No depth exemplar available — `ONBOARDING.md` §3 is the bar. Point\n"
+        "   `AAJ_EXEMPLAR` at a reference analysis.md to calibrate against one.)")
     ex2 = exemplar_short()
     ex2_line = f"- Second exemplar (same framework, from this corpus): `{ex2}`" if ex2 else ""
     reason_note = REASON_NOTES.get(cat, REASON_NOTES["soft"])
@@ -192,8 +202,7 @@ from any other trajectory. You are **fully autonomous**; do not ask questions.
 ## 0. Required reading (use the Read tool, read all of it before starting)
 1. Framework: `{ONBOARDING}` — follow its workflow, depth standard, six-stage-plus-X
    structure, and its "iron rules" exactly.
-2. Depth/structure **gold-standard exemplar**: `{EXEMPLAR_LONG}`. Your output's depth
-   must match it.
+{ex1_line}
 {ex2_line}
 
 ## 1. This task's data (all in the current working directory)
