@@ -7,7 +7,7 @@ Load it in code via `from ir.actions import REGISTRY, ACTIONS, get`.
 
 ## How this was built (data, not vibes)
 
-Per CLAUDE.md §15.3 ("动作词汇从真实数据归纳，不是拍脑袋设计"), the vocabulary is
+The vocabulary is induced from real data rather than designed top-down, so it is
 **induced from two complementary corpora**:
 
 - **Corpus A — 143 GitHub science agents** (this survey): gives the *breadth* of

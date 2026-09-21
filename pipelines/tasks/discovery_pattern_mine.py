@@ -10,13 +10,13 @@ Pipeline (deterministic front-end + LLM reconstruction, §5):
                        + novelty_move. Faithful to the paper, result-conditioned.
   3. aggregate    : cross-paper synthesis → consensus vs contradiction + rigor anchors.
 
-Output (examples/output/discovery_patterns/):
+Output (pipelines/output/discovery_patterns/):
   patterns/<paper_id>.json   one record per paper
   corpus_map.json            cross-paper consensus / contradictions / rigor anchors
   SUMMARY.md                 human-readable map for manual review (breadth phase)
 
 Run:
-  python examples/discovery_pattern_mine.py \
+  python pipelines/tasks/discovery_pattern_mine.py \
       [--zip co_pt_corpus.zip] [--limit N] [--no-aggregate]
 """
 
@@ -31,14 +31,14 @@ from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parent.parent
+REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
 from adapters.paper_corpus import PaperCorpus
 from reconstruct.discovery_pattern import DiscoveryPattern, aggregate, extract_pattern, to_dict
 from reconstruct.llm_openrouter import OpenRouterClient
 
-OUTDIR = REPO / "examples/output/discovery_patterns"
+OUTDIR = REPO / "pipelines/output/discovery_patterns"
 
 
 def main() -> None:
@@ -48,7 +48,7 @@ def main() -> None:
     ap.add_argument("--no-aggregate", action="store_true")
     ap.add_argument("--force", action="store_true", help="re-extract papers whose JSON already exists")
     ap.add_argument("--outdir", default=None, help="write patterns/ + corpus_map.json + SUMMARY.md here "
-                    "(default: examples/output/discovery_patterns). Use a separate dir for a new corpus.")
+                    "(default: pipelines/output/discovery_patterns). Use a separate dir for a new corpus.")
     ap.add_argument("--workers", type=int, default=1,
                     help="parallel LLM extraction workers (each paper's call is I/O-bound; "
                          "one OpenRouterClient per worker, resume-cache check stays sequential)")

@@ -1,4 +1,4 @@
-"""OpenAlex metadata adapter + tiered paper scorer (CLAUDE.md §2-layer-1, §18).
+"""OpenAlex metadata adapter + tiered paper scorer.
 
 The discovery line (§18) mines *patterns* from a paper corpus, but not every
 paper deserves equal weight. The user's framing: grade papers **bronze / silver /

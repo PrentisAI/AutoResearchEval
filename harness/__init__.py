@@ -1,4 +1,4 @@
-"""Rollout harness (CLAUDE.md §8, §9 stage-4) — MLGym-style scale-up. Optional/later.
+"""Rollout harness — MLGym-style scale-up. Optional/later.
 
 Out of scope for the initial build (§9: quality-first cold start needs only
 hundreds–low-thousands of verified trajectories; scale via RL rollout, not static

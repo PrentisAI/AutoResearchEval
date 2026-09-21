@@ -1,4 +1,4 @@
-"""Tiered paper-corpus crawler (CLAUDE.md §18, the user's bronze/silver/golden plan).
+"""Tiered paper-corpus crawler (bronze/silver/golden).
 
 Front-end of the discovery line: given a topic query, crawl OpenAlex, grade every
 hit **bronze / silver / golden** from automatic metadata signals (no hand-curated
@@ -13,13 +13,13 @@ The grade encodes scientific *taste*:
 Recency-safe: young papers (null fwci/percentile) are graded on venue/institution
 signals; citations only ever promote (§ adapters/openalex.py).
 
-Outputs (examples/output/tiered_corpus/<slug>/):
+Outputs (pipelines/output/tiered_corpus/<slug>/):
   manifest.jsonl     one line per work: {work_id, doi, tier, weight, pdf_url, signals…}
   download_list.txt  pdf_url<TAB>work_id  for the OA papers (feeds the PDF fetcher)
   SUMMARY.md         tier counts + the golden picks, for manual review (breadth phase)
 
 Run (uses the scicoder env's plain python; only stdlib networking):
-  python examples/crawl_tiered_corpus.py \
+  python pipelines/corpus/crawl_tiered_corpus.py \
       --query "CO oxidation Pt single atom catalyst" --max 150 \
       [--filters "from_publication_date:2018-01-01"] [--slug co_pt]
 """
@@ -35,7 +35,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Optional
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from adapters.openalex import (  # noqa: E402
     OpenAlexClient,
@@ -46,7 +46,7 @@ from adapters.openalex import (  # noqa: E402
 )
 from dataclasses import asdict  # noqa: E402
 
-OUTROOT = Path(__file__).resolve().parent / "output" / "tiered_corpus"
+OUTROOT = Path(__file__).resolve().parents[1] / "output" / "tiered_corpus"
 
 
 def _slug(s: str) -> str:

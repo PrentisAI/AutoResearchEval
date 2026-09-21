@@ -5,7 +5,7 @@ This is the bridge the user asked for: §18's ``DiscoveryPattern`` is a *flat* r
 though, is an *incremental* sequence of small reasoning moves — "the field believed
 X, but Y was untested, so I asked Q, picked system S, computed it, compared to the
 reference, and concluded Z". To make discovery learnable we lay that arc onto an
-**atomic discovery action space** and emit one IR ``Trajectory`` (CLAUDE.md §0.9
+**atomic discovery action space** and emit one IR ``Trajectory``
 discovery→RL, §18.3).
 
 Two-level action structure (deliberate):

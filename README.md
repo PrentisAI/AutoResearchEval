@@ -26,12 +26,10 @@ matched a reference; it does not tell you how the agent worked or where it broke
 **AutoResearchEval** is a diagnostic study of that gap. It builds **100 tasks** from published
 frontier science across **seven domains**, runs each one as an autonomous six-stage rollout under
 **eight harness–model combinations** (**800 trajectories**), and annotates every trajectory at the
-*process* level — against the artifacts it produced, not just its report. The annotations are
-organized by **ARFT**, the AutoResearch Failure Taxonomy: **45 empirically-grounded failure
-patterns** on two axes (lifecycle stage × root cause). Failures appear at every stage but converge
-on one limitation: agents lack a **metacognitive loop** — the ability to check what they produced
-against what they found, revise when it does not hold up, and question whether the path they took
-was sound.
+*process* level — against the artifacts it produced, not just its report. Failures appear at every
+stage but converge on one limitation: agents lack a **metacognitive loop** — the ability to check
+what they produced against what they found, revise when it does not hold up, and question whether
+the path they took was sound.
 
 ## The study in one figure
 
@@ -45,10 +43,8 @@ was sound.
 
 Two task types are reported separately and never compared: **open-ended discovery** (*n* = 70; no
 metric exists, so the process is what is judged) and **target-anchored optimization** (*n* = 30;
-an explicit human SOTA or computable metric exists).
-
-The eight agents — one harness supplies the tool loop, file system, and code execution; the
-backbone model drives it:
+an explicit human SOTA or computable metric exists). The eight agents — one harness supplies the
+tool loop, file system, and code execution; the backbone model drives it:
 
 | Harness | Backbone models |
 |---|---|
@@ -58,51 +54,29 @@ backbone model drives it:
 
 ## What is in this repository
 
-The study has three moving parts — **build the tasks**, **run the agents**, **diagnose the
-trajectories**. This repository is the code for the first and the third.
+The study has three moving parts — build the tasks, run the agents, diagnose the trajectories.
+This repository is the code for the first and the third.
 
 ```
-papers ──▶ [ this repo: task construction ] ──▶ tasks ──▶ [ container rollouts: NOT here ]
-                                                              │
-                                            trajectories ◀────┘
-                                                  │
-                                                  ▼
-                                     [ this repo: agent-as-a-judge ] ──▶ analysis.md ──▶ ARFT labels
+papers ──▶ [ this repo: pipelines/ ] ──▶ tasks ──▶ [ container rollouts: NOT here ]
+                                                        │
+                                      trajectories ◀────┘
+                                            │
+                                            ▼
+                               [ this repo: agent-as-a-judge/ ] ──▶ analysis.md ──▶ ARFT labels
 ```
 
-**1 · Task construction** — papers in, runnable task directories out (panel **a**).
+| Area | What it is | Docs |
+|---|---|---|
+| [`pipelines/`](pipelines/) | **papers → tasks** (panel **a**): crawl and tier a corpus, extract the seven fields, materialize runnable task directories | [`pipelines/README.md`](pipelines/README.md) |
+| [`agent-as-a-judge/`](agent-as-a-judge/) | **trajectories → ARFT labels** (panel **c**): the two-stage artifact-aware judge and the 45-pattern taxonomy | [README](agent-as-a-judge/README.md) · [ARFT](agent-as-a-judge/ARFT.md) |
+| [`harness/`](harness/), [`verify/`](verify/) | the rubric scorer, the domain-agnostic episode skeleton, and computational catalysis as the one worked recompute oracle | [`harness/README.md`](harness/README.md) |
+| [`ir/`](ir/), [`export/`](export/) | trajectory IR, the two induced action registries, SFT/ReAct export with loss masking | [`ir/README.md`](ir/README.md) |
+| [`adapters/`](adapters/), [`reconstruct/`](reconstruct/) | library code behind `pipelines/`: OpenAlex + PDF-corpus adapters, the extraction prompts, the OpenRouter teacher client | — |
 
-| Path | What it does |
-|---|---|
-| `adapters/openalex.py` | OpenAlex metadata + automatic bronze/silver/golden tiering of candidate papers |
-| `adapters/paper_corpus.py` | reads a MinerU-parsed PDF corpus into section-sliced text |
-| `reconstruct/discovery_pattern.py` | the seven-field extraction pass + novelty-move label (this is the prompt printed in the paper's appendix) |
-| `reconstruct/paper_gt.py` | parses the paper's reported numbers into the held-out gold |
-| `reconstruct/llm_openrouter.py` | OpenRouter client for the extraction/teacher calls |
-| `examples/` | the drivers that chain the above: crawl → fetch → mine → export → materialize |
-
-**2 · Diagnosis** — trajectories in, ARFT labels out (panel **c**).
-
-| Path | What it does |
-|---|---|
-| `agent-as-a-judge/generate/` | Stage 1 — one fresh Claude Code session per trajectory writes `analysis.md`, a six-stage critique with claim-by-claim verdicts, plus a quality checker |
-| `agent-as-a-judge/analysis_long.md` | the worked reference analysis Stage 1 hands every session as its depth/structure standard |
-| `agent-as-a-judge/classify/` | Stage 2 — `analysis.md` → ARFT pattern IDs, pattern × model matrices, root-cause rollups, agreement stats |
-| `agent-as-a-judge/classify/arft_patterns.py` | the 45-pattern label space (source of truth) |
-| `agent-as-a-judge/classify/arft_guide.md` | the operational guide handed to the classifier |
-
-Full details: [`agent-as-a-judge/README.md`](agent-as-a-judge/README.md).
-
-**3 · Scoring and reference-domain scaffolding.** The remaining directories are the machinery the
-task-construction line grew out of. They are useful if you want to extend the task suite with a
-new scored domain, and unnecessary if you only want to reproduce the diagnosis.
-
-| Path | What it does |
-|---|---|
-| `harness/discovery_verifier.py` | the rubric scorer behind the `reward` / `conclusion_match` / `soft[<observable>]` fields quoted in the paper's case studies |
-| `harness/discovery_env.py` | domain-agnostic discovery episode skeleton (FRAME → DESIGN → EXECUTE → RESOLVE); imports no chemistry |
-| `harness/domains/catalysis_qe.py`, `harness/co_pt_oracle.py`, `harness/recompute_tools.py`, `verify/mlip_prefilter.py` | computational catalysis as the one worked example of a live recompute oracle (Quantum ESPRESSO / MLIP) |
-| `ir/`, `export/` | trajectory IR, typed action registries, SFT/ReAct export with loss masking |
+Groups 3 and 4 are the machinery the task-construction line grew out of. They matter if you want
+to extend the suite with a new scored domain, and are unnecessary if you only want to reproduce
+the diagnosis.
 
 ### Not in this repository
 
@@ -134,78 +108,23 @@ pip install -e ".[atomate2,mp]"  # atomate2 TaskDocs, Materials Project
 `agent-as-a-judge/` installs separately (`httpx`, `pandas`) and needs an authenticated `claude`
 CLI for Stage 1.
 
-## Pipeline 1 — papers to tasks
+## Quickstart
 
-### Crawl and grade a corpus
-
-Tiering is automatic from OpenAlex signals — no hand-curated whitelist: **bronze** (breadth),
-**silver** (the workhorse for extraction), **golden** (elite venue *and* field-leading impact,
-weighted up downstream). Recent papers are graded on venue and institution; citations only ever
-promote, so a 2026 paper is never punished for having no citations yet.
+**Papers → tasks** — full walkthrough in [`pipelines/README.md`](pipelines/README.md):
 
 ```bash
-python examples/crawl_topic_set.py --per-topic 60 --set-name diverse_v1
-python examples/fetch_corpus_pdfs.py --set diverse_v1 --unpaywall --s2 --core
-```
-
-### Extract the seven fields
-
-One LLM pass per paper returns the seven fields, the key claims, and one novelty-move label
-(`consensus-overturn`, `method-correction`, `new-regime`, `mechanism`, `scaling-relation`,
-`reconciliation`, `incremental`). It is a reconstruction, not an evaluation: the model reports
-what the paper states and never invents numbers.
-
-```bash
-python examples/discovery_pattern_mine.py --zip corpus.zip     # -> one record per paper
-```
-
-Each field has a job. **Premise** and **Tension** become the agent's query. **KeyClaims** and
-**Conclusion** are withheld as gold. **Experiment** and **Method** gate whether a paper can become
-a runnable task at all — a purely wet-lab experiment or a single-step lookup is dropped.
-**Motivation** and **Conclusion** decide whether the task is *open-ended discovery* or
-*target-anchored optimization*.
-
-### Materialize task directories
-
-```bash
-python examples/export_discovery_tasks.py          # -> discovery_tasks.jsonl
-python examples/materialize_discovery_tasks.py \
-    --jsonl examples/output/discovery_tasks.jsonl \
+python pipelines/corpus/crawl_topic_set.py --per-topic 60 --set-name diverse_v1
+python pipelines/corpus/fetch_corpus_pdfs.py --set diverse_v1 --unpaywall --s2 --core
+python pipelines/tasks/discovery_pattern_mine.py --zip corpus.zip
+python pipelines/tasks/export_discovery_tasks.py
+python pipelines/tasks/materialize_discovery_tasks.py \
+    --jsonl pipelines/output/discovery_tasks.jsonl \
     --template path/to/env_template \
-    --out examples/output/discovery_tasks_v6 --prompt-version v6_report_review
+    --out pipelines/output/discovery_tasks_v6 --prompt-version v6_report_review
 ```
 
-`--template` points at a directory holding `environment/Dockerfile`, copied into every task.
-Each task directory holds `instruction.md` (premise + tension, an open decision schema, **no gold
-leaked**), a `task.toml`, and the per-paper rubric the verifier scores against.
-
-`instruction.md` is what carries the six-stage process the agent is asked to work through:
-**A** Ideation & Planning → **B** Retrieval & Synthesis → **C** Execution & Implementation →
-**D** Analysis & Interpretation → **E** Writing & Documentation → **F** Self-Verification & Review.
-Six wordings live side by side in `PROMPT_VERSIONS` so they can be A/B'd on an identical task set;
-each one's rationale is recorded in the comment above it.
-
-| `--prompt-version` | |
-|---|---|
-| `v6_report_review` | **the prompt used for the paper's 800 rollouts**, reproduced in the appendix: `decision.json` first, then a narrative `report.md` with a `## Peer Review` section |
-| `v5_report_review` | same ordering fix, no peer-review section |
-| `v4_report_review`, `v3_failure_taxonomy` | intermediate: added `process_log`, then `report.md` |
-| `v2_af` | domain-general six-stage prompt, no `process_log` (the script's default) |
-| `v1_domain_specific` | original chemistry/materials wording, no explicit process structure |
-
-## Pipeline 2 — trajectories to ARFT labels
-
-Many failures leave no trace in the report — a result the code never produced, a method the logs
-never ran — so catching them means checking the manuscript against the artifacts. The judge is
-therefore **artifact-aware**: a fresh, zero-history Claude Code session per trajectory, with shell
-access and no network, handed the full evidence package (task statement, execution log, delivered
-filesystem, the scorer's own source, every scoring call, read-only gold) and required to anchor
-every finding to a line, file, or value.
-
-Against three-expert annotation on 50 stratified trajectories it reaches **κ = 0.75** (pattern)
-and **0.83** (root cause), versus 0.53 / 0.62 for a single-call LLM-as-a-judge on the transcript
-alone. Almost all of the gain is recall — which is the point: artifact access is what makes
-transcript-invisible failures detectable.
+**Trajectories → ARFT labels** — full walkthrough in
+[`agent-as-a-judge/README.md`](agent-as-a-judge/README.md):
 
 ```bash
 # Stage 1 — trajectory -> analysis.md (six-stage critique, claim-by-claim verdicts)
@@ -220,82 +139,15 @@ export ARFT_OPENROUTER_KEY=...
 python3 arft_verify.py       # polarity regression + cross-run Cohen's kappa
 ```
 
-`traj_tools.py` normalizes three log formats (Claude Code stream-JSON, Gemini CLI NDJSON, Codex
-CLI JSONL), so multi-megabyte logs need no truncation. A checker enforces coverage, depth, and
-anchor density; documents that fail regenerate with gate-specific feedback.
+## ARFT in one paragraph
 
-## ARFT — the label space
-
-45 patterns on two axes: the **stage** where a failure surfaces, and the **root cause** of why it
-happens. Every pattern maps to exactly one pillar.
-
-| Root-cause pillar | Core failure focus | Patterns | Share of hits |
-|---|---|---|---|
-| **R1 · Grounding & Faithfulness** | Claims disconnect from the code, data, logs, or literature that should license them | A.6, B.1, B.2, B.5, C.3, D.1, D.4, D.6, E.1, E.4, F.6, X.6 | 31.0% |
-| **R2 · Cognitive Depth & Adaptability** | Shallow reasoning and search, passive self-critique, inability to re-plan | A.1, A.3, B.4, B.6, C.6, C.7, D.5, F.1–F.4, X.3, X.7 | 27.6% |
-| **R3 · Scientific Integrity & Alignment** | Metric hacking, shortcut reliance, concealed failure, conclusions fixed in advance | A.2, A.5, C.1, C.2, D.2, D.3, D.7, E.2, E.3, F.5, X.2, X.4, X.5 | 33.5% |
-| **R4 · Engineering Robustness** | Numerical faults, unhandled runtime errors, broken CLI/OS interaction | A.4, B.3, C.4, C.5, C.8, X.1, X.8 | 7.9% |
-
-Stages: **A** Ideation (6 patterns) · **B** Retrieval (6) · **C** Execution (8) · **D** Analysis
-(7) · **E** Writing (4) · **F** Review (6) · **X** Cross-stage (8).
-
-Auditing all 800 trajectories yields 12,712 hits. The three cognitive pillars account for 92.1% of
-them; engineering robustness for 7.9%. The single most frequent pattern is **F.4 · Uncorrected
-Self-Awareness** — the agent identifies a severe flaw during its own review and ships anyway — in
-82.5% of analyses. The evidence that would refute most failures is already sitting in the agent's
-own run directory; the comparison is simply never performed.
-
-## Scoring scaffolding and the catalysis reference domain
-
-This is group 3 above — read it if you want to extend the suite with a new scored domain, skip it
-if you only want to reproduce the diagnosis.
-
-Open-ended tasks expose no objective and are judged on process. Where a task does have a metric,
-the terminal reward is a gate, not a weighted sum:
-
-```
-reward = correctness × (0.5 + 0.25·significance + 0.25·novelty)
-```
-
-`correctness ∈ {0,1}` is a re-executed number matching the held-out gold within tolerance. Wrong
-or un-run scores **0**, so the soft dimensions only *rank* rollouts that already passed. The
-episode gate has the same shape — `sane ∧ decisive ∧ valid`, not "produced a number".
-
-`harness/discovery_env.py` imports no chemistry at all: the skeleton (frame a tension → design an
-experiment → read the result → decide if it is resolved) is domain-agnostic, and catalysis is the
-first plugin (`harness/domains/catalysis_qe.py`). Adding a second domain means a new oracle, not a
-new driver. Three recompute tiers are wired up behind `examples/discovery_rollout.py`:
-
-| Tier | What it is | Admissible? |
-|---|---|---|
-| `emt` | instant EMT — plumbing / CI only | never (physically meaningless) |
-| `mlip` | CHGNet universal MLIP — cheap prefilter | no (not the honest reward) |
-| `qe` | real Quantum ESPRESSO 7.5 PBE-PAW | **yes** — minutes per calc, MPI |
-
-```bash
-python examples/discovery_rollout.py --calc emt              # validate the loop, instant
-QE_NP=32 QE_NPOOL=4 python examples/discovery_rollout.py --calc qe   # real DFT, admissible
-```
-
-Two invariants are enforced in data rather than prose:
-
-- **Nothing is verified until an execution check says so.** `Trajectory.is_admissible()` returns
-  `verification.passed`; export refuses the rest.
-- **Failure branches are kept.** A non-zero exit or a correction is flagged
-  `is_failure_branch=True` and retained as error→recovery supervision in the SFT export.
-
-### Action vocabulary
-
-Two registries under `ir/actions/`, induced from data (143 GitHub science agents + real provenance
-diffs) rather than designed top-down:
-
-- **`registry.json`** — 26 verifier-bound *execution* actions across 11 categories
-  (`build_structure`, `run_dft`, `check_convergence`, `triage_failure`, `train_mlip`, …). Each
-  pins a verifier this repo owns: external tools supply the action space, verification is ours.
-- **`discovery_registry.json`** — 10 atomic *reasoning* moves in three phases (FRAME → PROBE →
-  RESOLVE): `survey_consensus`, `identify_tension`, `formulate_question`, `propose_hypothesis`,
-  `select_system`, `choose_method`, `run_calculation`, `compare_reference`, `interpret_result`,
-  `draw_conclusion`.
+45 empirically-grounded failure patterns on two axes — the lifecycle **stage** where a failure
+surfaces (A–F plus a cross-cutting X), and its **root cause** (grounding, depth, integrity,
+robustness). Auditing all 800 trajectories yields 12,712 hits; the three cognitive pillars account
+for 92.1% of them and engineering robustness for 7.9%. The single most frequent pattern is
+**F.4 · Uncorrected Self-Awareness** — the agent names a severe flaw in its own review and ships
+anyway — in 82.5% of analyses. Full label space and per-pillar breakdown:
+[`agent-as-a-judge/ARFT.md`](agent-as-a-judge/ARFT.md).
 
 ## Environment variables
 

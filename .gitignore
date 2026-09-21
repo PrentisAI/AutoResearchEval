@@ -4,7 +4,7 @@ __pycache__/
 *.aiida
 /datasets/
 output/
-examples/output/
+pipelines/output/
 *.egg-info/
 .venv/
 venv*/

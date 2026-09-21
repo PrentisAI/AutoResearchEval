@@ -17,7 +17,7 @@ Two reward dimensions follow from `qe_ready` (§0.9 two-data-classes):
                      never enters the admissible hard-data pool.
 
 Run:
-  python examples/export_discovery_tasks.py [--out examples/output/discovery_tasks.jsonl]
+  python pipelines/tasks/export_discovery_tasks.py [--out pipelines/output/discovery_tasks.jsonl]
 """
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parent.parent
+REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
 from reconstruct.discovery_pattern import DiscoveryPattern  # noqa: E402
@@ -52,7 +52,7 @@ PATTERN_DIRS = {
     "discovery_patterns_naturebench_ml_v2": "naturebench_ml_v2",
     "discovery_patterns_subset3": "subset3",
 }
-OUTROOT = REPO / "examples/output"
+OUTROOT = REPO / "pipelines/output"
 _SET_DIR = {  # set label → output dir stem (reverse of PATTERN_DIRS, for patterns_dir field)
     "co_pt": "discovery_patterns", "diverse_sampled": "discovery_patterns_diverse",
     "diverse_1k": "discovery_patterns_diverse_1k", "diverse_2k": "discovery_patterns_diverse_2k",
@@ -93,7 +93,7 @@ def _task_row(p: DiscoveryPattern, set_label: str, raw: dict) -> dict:
     return {
         "task_id": p.paper_id,
         "set": set_label,
-        "patterns_dir": f"examples/output/{_SET_DIR[set_label]}/patterns",  # for unambiguous rollout
+        "patterns_dir": f"pipelines/output/{_SET_DIR[set_label]}/patterns",  # for unambiguous rollout
         "title": p.title,
         "premise": p.premise_consensus,        # framing only — agent sees this
         "tension": p.tension,                  # the discovery seed (no answer leaked)

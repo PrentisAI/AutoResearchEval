@@ -1,4 +1,4 @@
-"""Export (CLAUDE.md §7) — IR → SFT(ReAct).
+"""Export — IR → SFT(ReAct).
 
 This is the only place the engine emits its product format; training lives
 downstream (out of scope). Export refuses non-admissible trajectories by default

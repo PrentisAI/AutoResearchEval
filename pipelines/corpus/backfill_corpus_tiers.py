@@ -1,7 +1,6 @@
-"""Backfill bronze/silver/golden tiers onto the existing discovery-pattern corpus
-(CLAUDE.md §18 + the user's tiering plan).
+"""Backfill bronze/silver/golden tiers onto an existing discovery-pattern corpus.
 
-The 93 CO/Pt patterns in ``examples/output/discovery_patterns/patterns/`` were
+The 93 CO/Pt patterns in ``pipelines/output/discovery_patterns/patterns/`` were
 mined before tiering existed; their filenames are DOIs (``10.1021_ACSCATAL.6B00476``
 → ``10.1021/ACSCATAL.6B00476``). This script resolves each DOI on OpenAlex, grades
 it (``adapters/openalex.score_tier``), and:
@@ -14,7 +13,7 @@ it (``adapters/openalex.score_tier``), and:
 Idempotent + resumable: re-running reuses ``tiers.json`` unless ``--force``.
 
 Run:
-  python examples/backfill_corpus_tiers.py [--patterns-dir DIR] [--force] [--limit N]
+  python pipelines/corpus/backfill_corpus_tiers.py [--patterns-dir DIR] [--force] [--limit N]
 """
 
 from __future__ import annotations
@@ -28,7 +27,7 @@ from collections import Counter
 from dataclasses import asdict
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from adapters.openalex import (  # noqa: E402
     OpenAlexClient,
@@ -38,7 +37,7 @@ from adapters.openalex import (  # noqa: E402
     score_tier,
 )
 
-DEFAULT_DIR = Path(__file__).resolve().parent / "output" / "discovery_patterns" / "patterns"
+DEFAULT_DIR = Path(__file__).resolve().parents[1] / "output" / "discovery_patterns" / "patterns"
 
 
 _WORK_ID_RE = re.compile(r"^W\d+$")
