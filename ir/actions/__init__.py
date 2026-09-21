@@ -1,8 +1,8 @@
 """SciData Engine action space — the 26 normalized, verifier-bound actions.
 
 This is the **foundation** for trajectory generation: `id` here == `Action.name`
-in `ir/trajectory.py`. The vocabulary was INDUCED from two corpora (CLAUDE.md
-§0.9 / §16.1: vocab from data, not top-down) — 143 GitHub science agents +
+in `ir/trajectory.py`. The vocabulary was INDUCED from two corpora
+(from data, not designed top-down) — 143 GitHub science agents +
 real provenance diffs (mc2d/ACWF restart chains) — and every action pins a
 SciEngine-OWNED deterministic verifier (external tools give the action space,
 verification is always ours).
@@ -30,8 +30,8 @@ BY_ID: dict[str, dict] = {a["id"]: a for a in ACTIONS}
 ACTION_IDS: set[str] = set(BY_ID)
 
 # ── discovery (reasoning) action space — the layer above the execution actions ──
-# Models the incremental scientific-discovery arc (CLAUDE.md §0.9 discovery→RL,
-# §18). run_calculation grounds into the execution actions above; the terminal
+# Models the incremental scientific-discovery arc.
+# run_calculation grounds into the execution actions above; the terminal
 # reward grounds into the recompute_handle. See discovery_registry.json + the
 # loader in reconstruct/discovery_trajectory.py.
 DISCOVERY_REGISTRY_PATH = Path(__file__).resolve().parent / "discovery_registry.json"

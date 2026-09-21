@@ -1,4 +1,4 @@
-"""Move-driven, live-oracle discovery rollout (CLAUDE.md §0.9 hinge, §18.3).
+"""Move-driven, live-oracle discovery rollout.
 
 THIN DRIVER over the refactored architecture (2026-06-22):
   * ``harness/discovery_env.py``       — the domain-AGNOSTIC discovery skeleton (move
@@ -12,7 +12,7 @@ oracle at the chosen tier/budget, (3) runs the episode through ``DiscoveryEnv``,
 (4) writes the IR + SFT products. The chemistry that used to live here is now in the
 plugin; to add a second domain you write a new oracle, not a new driver.
 
-Unlike the 92 corpus trajectories (``examples/discovery_trajectory_build.py``) whose
+Unlike the 92 corpus trajectories (the corpus trajectory builder (not in this release)) whose
 ``run_calculation`` observations are *narrated from the paper* (pending-soft-verify),
 here ``run_calculation`` EXECUTES the recompute and the terminal reward IS that
 deterministic recompute (the "live recompute oracle in loop" the discovery→RL data needs).
@@ -24,8 +24,8 @@ Calc tiers (swap the oracle tier without touching the skeleton):
 
 Run (any env with the base deps for emt/mlip plumbing; --calc qe needs an env that
 reaches pw.x — point QE_PW/QE_MPIRUN at it if they are not on PATH):
-  python examples/discovery_rollout.py --calc emt      # validate the loop (instant)
-  QE_NP=32 QE_NPOOL=4 python examples/discovery_rollout.py --calc qe   # real, admissible reward
+  python pipelines/rollout/discovery_rollout.py --calc emt      # validate the loop (instant)
+  QE_NP=32 QE_NPOOL=4 python pipelines/rollout/discovery_rollout.py --calc qe   # real, admissible reward
 """
 from __future__ import annotations
 
@@ -35,7 +35,7 @@ import os
 import sys
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parent.parent
+REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
 from export.to_sft_react import trajectory_to_messages
@@ -45,8 +45,8 @@ from reconstruct.discovery_moves import sanitize_method_spec  # re-exported for 
 from reconstruct.discovery_pattern import DiscoveryPattern
 from reconstruct.llm_openrouter import OpenRouterClient
 
-PATTERNS_DIR = REPO / "examples/output/discovery_patterns/patterns"
-OUTDIR = REPO / "examples/output/discovery_rollouts"
+PATTERNS_DIR = REPO / "pipelines/output/discovery_patterns/patterns"
+OUTDIR = REPO / "pipelines/output/discovery_rollouts"
 
 
 def canonical_co_pt() -> DiscoveryPattern:
@@ -216,7 +216,7 @@ def main() -> None:
                     help="built-in task: co_pt (clean metal) | sac (carbon SAC) | oxide_sac (oxide SAC)")
     ap.add_argument("--paper-id", default=None, help="corpus pattern id (overrides --task)")
     ap.add_argument("--patterns-dir", default=None,
-                    help="dir holding <paper-id>.json (default: examples/output/discovery_patterns/patterns)")
+                    help="dir holding <paper-id>.json (default: pipelines/output/discovery_patterns/patterns)")
     ap.add_argument("--metal", default=None, help="pin the active/slab metal (QE-ready combo)")
     ap.add_argument("--support", default=None, help="pin the support (graphene|ceo2|tio2|tio2_anatase)")
     ap.add_argument("--respect-system", action="store_true",

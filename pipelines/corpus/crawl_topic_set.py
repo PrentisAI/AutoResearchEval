@@ -1,12 +1,11 @@
-"""Multi-topic tiered crawler — diversity over a *set* of topics, foldered by topic
-(CLAUDE.md §18.9, the user's "提升话题多样性 + 按 topic 分子文件夹").
+"""Multi-topic tiered crawler — diversity over a *set* of topics, foldered by topic.
 
 The single-topic crawler (``crawl_tiered_corpus.py``) deepens ONE query; this driver
 widens the corpus across a curated set of distinct computational-catalysis / materials
 topics so the discovery miner sees a broad knowledge surface (§18 breadth phase), not
 just CO/Pt. Each topic is crawled + bronze/silver/golden graded into its OWN folder.
 
-Layout (examples/output/tiered_corpus/<set_name>/):
+Layout (pipelines/output/tiered_corpus/<set_name>/):
   <topic_slug>/manifest.jsonl      one folder per topic (self-contained: manifest +
                   download_list.txt   download list + SUMMARY.md, same shape as the
                   SUMMARY.md          single-topic crawler emits)
@@ -21,7 +20,7 @@ MLIPs, electrolytes, MOFs, 2D materials, perovskites, alloys — deliberately or
 so the union maximises topical coverage. Override with --topics or a --topics-file.
 
 Run:
-  python examples/crawl_topic_set.py [--per-topic 60] [--set-name diverse_v1] \
+  python pipelines/corpus/crawl_topic_set.py [--per-topic 60] [--set-name diverse_v1] \
       [--sort relevance_score:desc] [--filters from_publication_date:2018-01-01] \
       [--topics-file my_topics.txt]
 """
@@ -35,10 +34,10 @@ import time
 from collections import Counter
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from adapters.openalex import OpenAlexClient, TierConfig  # noqa: E402
-from examples.crawl_tiered_corpus import OUTROOT, _slug, crawl_topic, write_topic_outputs  # noqa: E402
+from pipelines.corpus.crawl_tiered_corpus import OUTROOT, _slug, crawl_topic, write_topic_outputs  # noqa: E402
 
 # A deliberately orthogonal spread of computational catalysis / materials topics.
 # Each is a focused query (so OpenAlex relevance is tight) but the SET is broad.

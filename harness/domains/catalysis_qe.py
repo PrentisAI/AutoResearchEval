@@ -1,4 +1,4 @@
-"""Computational-catalysis domain plugin for the discovery skeleton (CLAUDE.md §18).
+"""Computational-catalysis domain plugin for the discovery skeleton.
 
 This is the FIRST domain plugged into ``harness/discovery_env.py``. It owns ALL the
 chemistry the skeleton must not know: building atomistic systems (slab / carbon-SAC /

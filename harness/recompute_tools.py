@@ -1,5 +1,5 @@
 """Generic, calculator-agnostic recompute tools — the executor recipes behind the
-discovery recompute_handles (CLAUDE.md §0.9 hinge, §6 verification, §18.3).
+discovery recompute_handles.
 
 These are NOT new physics engines; each is a thin COMPOSITION over a single generic
 calculator (`calc_factory(atoms) -> ASE calculator`):

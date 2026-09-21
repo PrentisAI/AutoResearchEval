@@ -1,4 +1,4 @@
-"""Domain-agnostic scientific-discovery environment (CLAUDE.md §0.9 hinge, §18, RL track).
+"""Domain-agnostic scientific-discovery environment.
 
 THE SEAM. This module is the *skeleton* of a discovery episode and deliberately imports
 NOTHING domain-specific (no ASE, no QE, no `recompute_tools`). That import-poverty is the

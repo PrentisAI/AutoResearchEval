@@ -1,16 +1,10 @@
-"""Source adapters: each lowers one source into the unified IR (CLAUDE.md §8).
+"""Source adapters: each lowers one source into the unified IR.
 
-Submodules are imported lazily by callers (``from adapters import custodian_logs``)
-so that adapters requiring heavy optional deps (aiida_walker, atomate2_taskdoc,
-mp_api_tasks, mlflow_wandb) do not break ``import adapters`` when those extras
-are absent. Each adapter that needs an external package guards the import and
-anchors its version in a module header (§1.7, §11).
+  openalex      — OpenAlex metadata + automatic bronze/silver/golden paper tiering
+  paper_corpus  — a MinerU-parsed PDF corpus, read as section-sliced text
+
+Submodules are imported on demand (``from adapters.openalex import OpenAlexClient``)
+so an adapter needing a heavy optional dependency cannot break ``import adapters``.
 """
 
-__all__ = [
-    "aiida_walker",
-    "atomate2_taskdoc",
-    "custodian_logs",
-    "mp_api_tasks",
-    "mlflow_wandb",
-]
+__all__ = ["openalex", "paper_corpus"]
