@@ -1,4 +1,4 @@
-"""Each abstract discovery move as a PROMPTED FUNCTION (CLAUDE.md §18, §14).
+"""Each abstract discovery move as a PROMPTED FUNCTION.
 
 The discussion that produced this (2026-06-15): the engine moves (`run_dft`/`run_md`/…)
 are deterministic tools; the *abstract* moves (`select_system`, `choose_method`, and the

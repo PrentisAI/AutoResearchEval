@@ -3,7 +3,7 @@
 REWRITE: the old version baked a CO/metal-slab decision schema + an adsorption-only reward into
 every task. This version is general — each task carries the PAPER's own rubric (premise, tension,
 conclusion, observable, gold) and an OPEN decision schema; the agent models whatever system the
-paper is actually about. Reward = examples/discovery_rubric_evaluate.py (observable-routed
+paper is actually about. Reward = the rubric evaluator shipped with the task data (observable-routed
 correctness + the 4-dim rubric). recompute is one backend, not the whole reward.
 
 Per task dir <task_id>/:
@@ -13,10 +13,10 @@ Per task dir <task_id>/:
 Shared at dataset root tests/: evaluate.py (rubric reward) + recompute_tools.py + qe_relax.py.
 
 Run:
-  python examples/materialize_discovery_tasks.py \
-     --jsonl examples/output/discovery_tasks.jsonl \
+  python pipelines/tasks/materialize_discovery_tasks.py \
+     --jsonl pipelines/output/discovery_tasks.jsonl \
      --template <dir with environment/Dockerfile> \
-     --out examples/output/discovery_tasks_v2 \
+     --out pipelines/output/discovery_tasks_v2 \
      [--prompt-version v2_af]
 
 Prompt versions (PROMPT_VERSIONS below) are kept side by side, never overwritten in place, so
@@ -34,9 +34,14 @@ import json
 import shutil
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parent.parent
-_REWARD_SRC = [  # copied to dataset-root tests/ (shared, self-contained)
-    ("examples/discovery_rubric_evaluate.py", "evaluate.py"),
+REPO = Path(__file__).resolve().parents[2]
+# Copied into the dataset-root tests/ directory (shared, self-contained). Only files
+# that exist are copied — see the .exists() guard where this is consumed. In this
+# release only recompute_tools.py is present: the rubric evaluator and the QE relax
+# driver ship with the task-data release, so task directories materialized from this
+# repo alone have no tests/evaluate.py.
+_REWARD_SRC = [
+    ("harness/discovery_rubric_evaluate.py", "evaluate.py"),
     ("harness/recompute_tools.py", "recompute_tools.py"),
     ("harness/qe_relax.py", "qe_relax.py"),
 ]
@@ -588,9 +593,9 @@ def rubric(row: dict) -> dict:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--jsonl", default=str(REPO / "examples/output/discovery_tasks.jsonl"))
+    ap.add_argument("--jsonl", default=str(REPO / "pipelines/output/discovery_tasks.jsonl"))
     ap.add_argument("--template", required=True, help="dir with environment/Dockerfile")
-    ap.add_argument("--out", default=str(REPO / "examples/output/discovery_tasks_v2"))
+    ap.add_argument("--out", default=str(REPO / "pipelines/output/discovery_tasks_v2"))
     ap.add_argument("--prompt-version", default="v2_af", choices=sorted(PROMPT_VERSIONS),
                     help="which instruction.md wording to materialize (see module docstring)")
     args = ap.parse_args()

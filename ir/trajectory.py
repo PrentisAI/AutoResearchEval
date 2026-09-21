@@ -1,6 +1,6 @@
 """Unified intermediate representation (IR) for SciCoder trajectories.
 
-This module is the **convergence point** of the whole engine (CLAUDE.md §8):
+This module is the **convergence point** of the whole engine:
 
     source ──adapter──▶ IR ──reconstruct──▶ verify ──filter──▶ export
 
@@ -41,7 +41,7 @@ from pydantic import BaseModel, Field, model_validator
 # Enums
 # --------------------------------------------------------------------------- #
 class SourceType(str, Enum):
-    """Where a trajectory was reconstructed from (CLAUDE.md §2 three layers)."""
+    """Where a trajectory was reconstructed from; see the three layers below."""
 
     # layer 3 — provenance / tracking (⭐ the novel, independent space)
     AIIDA = "aiida"
@@ -60,7 +60,7 @@ class SourceType(str, Enum):
 
 
 class ProcessState(str, Enum):
-    """AiiDA-style process state (CLAUDE.md §4). Terminal = last three."""
+    """AiiDA-style process state. Terminal = last three."""
 
     CREATED = "created"
     RUNNING = "running"
@@ -75,7 +75,7 @@ class ProcessState(str, Enum):
 
 
 class ReconstructMethod(str, Enum):
-    """How thought/goal was recovered (CLAUDE.md §5). NONE = literal from source."""
+    """How thought/goal was recovered. NONE = literal from source."""
 
     NONE = "none"
     STAR = "star"                          # STaR rationalization (keep-if-correct)
@@ -85,7 +85,7 @@ class ReconstructMethod(str, Enum):
 
 
 class RewardStyle(str, Enum):
-    """verl-style reward_model.style (CLAUDE.md §7)."""
+    """verl-style reward_model.style."""
 
     RULE = "rule"      # deterministic physics / fail-to-pass check
     MODEL = "model"    # judge model

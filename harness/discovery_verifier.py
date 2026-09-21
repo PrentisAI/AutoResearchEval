@@ -1,5 +1,5 @@
 """Three-dimensional discovery verifier — the scorer for the Claude-Code-harness flywheel
-(CLAUDE.md §0.9, §18; docs/discovery_verifier_design.md).
+for the discovery flywheel.
 
 Flywheel: Claude Code harness + Qwen3-MoE endpoint runs a discovery task → THIS verifier
 scores the rollout → high-scored rollouts are kept for SFT → the tuned model drives the

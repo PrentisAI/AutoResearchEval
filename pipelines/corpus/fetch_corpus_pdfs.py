@@ -1,5 +1,5 @@
 """Fetch the open-access PDFs for a tiered corpus set, into each topic's folder
-(CLAUDE.md §18.9 — follows the metadata crawl; the user asked to actually pull the
+(follows the metadata crawl — this step actually pulls the
 原文 PDFs after grading).
 
 Reads each topic's ``manifest.jsonl`` (the authoritative record: work_id + pdf_url +
@@ -28,10 +28,10 @@ Repository-hosted copies (arXiv/ChemRxiv/HAL/PMC) rarely block bots; publisher
 OA links (Wiley/ACS/Springer/Elsevier) are the ones that 403 or serve a landing page.
 
 Run:
-  python examples/fetch_corpus_pdfs.py --set diverse_sampled          # all topics
-  python examples/fetch_corpus_pdfs.py --set diverse_sampled --topic co_oxidation_pt_single_atom_catalyst
-  python examples/fetch_corpus_pdfs.py --set diverse_sampled --tiers silver golden   # subset
-  python examples/fetch_corpus_pdfs.py --set diverse_sampled --unpaywall --s2 --core   # full fallback chain
+  python pipelines/corpus/fetch_corpus_pdfs.py --set diverse_sampled          # all topics
+  python pipelines/corpus/fetch_corpus_pdfs.py --set diverse_sampled --topic co_oxidation_pt_single_atom_catalyst
+  python pipelines/corpus/fetch_corpus_pdfs.py --set diverse_sampled --tiers silver golden   # subset
+  python pipelines/corpus/fetch_corpus_pdfs.py --set diverse_sampled --unpaywall --s2 --core   # full fallback chain
 """
 
 from __future__ import annotations
@@ -45,10 +45,10 @@ import time
 import urllib.request
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from adapters.openalex import OpenAlexClient  # noqa: E402
-from examples.crawl_tiered_corpus import OUTROOT  # noqa: E402
+from pipelines.corpus.crawl_tiered_corpus import OUTROOT  # noqa: E402
 
 # Obvious non-article assets OpenAlex sometimes returns as "pdf_url".
 _SKIP_EXT = (".jpg", ".jpeg", ".png", ".gif", ".tif", ".tiff", ".svg", ".bmp")

@@ -1,6 +1,6 @@
 """MLIP prefilter (§6) — cheap screen before expensive DFT re-execution.
 
-CLAUDE.md §6: "先 MLIP 预过滤再上 DFT" — use a universal MLIP (MACE-MP-0 /
+Prefilter with an MLIP before paying for DFT: use a universal MLIP (MACE-MP-0 /
 CHGNet / M3GNet) to quickly reject obviously-bad structures/relaxations before
 spending DFT, then re-run survivors at DFT and apply ``verify.physics_checks``.
 

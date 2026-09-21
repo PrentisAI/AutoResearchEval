@@ -1,4 +1,4 @@
-"""Shared plumbing for reconstruction techniques (CLAUDE.md §5).
+"""Shared plumbing for reconstruction techniques.
 
 Reconstruction narrates a *result* back into a *process* (thought/goal/relabel).
 Every technique here takes a pluggable :class:`LLMClient` so the pipeline wires

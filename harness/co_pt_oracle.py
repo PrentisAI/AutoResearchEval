@@ -1,5 +1,5 @@
 """Real QE 7.5 recompute oracle for CO adsorption on Pt(111) — the deterministic
-reward behind a discovery trajectory (CLAUDE.md §18.3, §0.9 hinge).
+reward behind a discovery trajectory.
 
 The CO/Pt(111) site-preference puzzle is the cleanest hard anchor in the CO/Pt
 corpus: a clean metal surface (no Hubbard-U), the textbook fact that CO binds

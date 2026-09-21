@@ -1,4 +1,4 @@
-"""Reconstruction techniques (CLAUDE.md §5) — narrate "result" back to "process".
+"""Reconstruction techniques — narrate "result" back to "process".
 
 All take a pluggable ``base.LLMClient`` and respect the keep-if-correct (§1.2)
 and provenance (§11) invariants. Pipeline position: IR → **reconstruct** →

@@ -14,8 +14,23 @@ verdict table and independent numerical sanity checks, not a summary.
 
 **Stage 2** classifies each `analysis.md` against **ARFT** (the AutoResearch Failure
 Taxonomy: `A.1`–`X.8`, 45 patterns spanning six lifecycle stages plus a cross-cutting
-layer, rolling up to four root-cause pillars) and rolls the results into a pattern ×
-model matrix, a root-cause breakdown, co-occurrence stats, and cross-model agreement.
+layer, rolling up to four root-cause pillars — see [`ARFT.md`](ARFT.md)) and rolls the
+results into a pattern × model matrix, a root-cause breakdown, co-occurrence stats, and
+cross-model agreement.
+
+## Why the judge is artifact-aware
+
+Many failures leave no trace in the report — a result the code never produced, a method
+the logs never ran — so catching them means checking the manuscript against the
+artifacts. Stage 1 therefore runs a fresh, zero-history session per trajectory, with
+shell access and no network, handed the full evidence package (task statement, execution
+log, delivered filesystem, the scorer's own source, every scoring call, read-only gold)
+and required to anchor every finding to a line, file, or value.
+
+Against three-expert annotation on 50 stratified trajectories this reaches **κ = 0.75**
+(pattern) and **0.83** (root cause), versus 0.53 / 0.62 for a single-call LLM-as-a-judge
+on the transcript alone. Almost all of the gain is recall — which is the point: artifact
+access is what makes transcript-invisible failures detectable.
 
 ## Install
 
@@ -44,8 +59,9 @@ python3 generate_analysis_cc.py --run-dir /path/to/your_model__your_suite \
 ```
 
 Expects `<run-dir>/traj/*.json`, one JSON object per trajectory with at least a
-`task_id` field and a log field `traj_tools.py` can recognize (Claude Code, Gemini CLI,
-and Codex CLI log shapes are supported out of the box — see `traj_tools.detect_format`).
+`task_id` field and a log field `traj_tools.py` can recognize. `traj_tools.py` normalizes
+three log formats out of the box — Claude Code stream-JSON, Gemini CLI NDJSON, Codex CLI
+JSONL — so multi-megabyte logs need no truncation; see `traj_tools.detect_format`.
 Writes `<model>/<task_id>/analysis.md` under `./corpus` by default (override with the
 `AAJ_CORPUS_DIR` env var).
 
@@ -112,11 +128,10 @@ reliably distinguishable and which need their guide entry sharpened.
 
 ## Taxonomy
 
-**ARFT** — the AutoResearch Failure Taxonomy — is defined in `classify/arft_patterns.py`
-(source of truth for the code list) and `classify/arft_guide.md` (the operational guide
-handed to the classifier — scoring rubric, discrimination rules for easily confused
-patterns, and a Do-NOT-label list worth rereading if you retarget this at a different
-kind of trajectory).
+The 45-pattern label space, its four root-cause pillars, and what the 800-trajectory
+audit found are documented in [`ARFT.md`](ARFT.md). The code list lives in
+`classify/arft_patterns.py` and the classifier's operational guide in
+`classify/arft_guide.md`.
 
 ## Reasoning budget
 

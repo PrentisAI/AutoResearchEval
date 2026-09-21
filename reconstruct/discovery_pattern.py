@@ -1,5 +1,5 @@
 """Mine the *discovery pattern* of a paper: premise/consensus → motivation →
-method → experiment → conclusion (CLAUDE.md §2-layer-1, the user's discovery axis).
+method → experiment → conclusion.
 
 Two kinds of supervision live in a paper and we keep them separate (v5 §0.9
 verification decoupling):

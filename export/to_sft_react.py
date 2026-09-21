@@ -1,4 +1,4 @@
-"""IR → cold-start SFT in ReAct message format (CLAUDE.md §7).
+"""IR → cold-start SFT in ReAct message format.
 
 Emits the exact shape from §7:
 
