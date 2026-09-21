@@ -133,8 +133,8 @@ pip install autoresearcheval
 ```python
 from autoresearcheval import generate_analysis, label_arft, pattern_info
 
-analysis = generate_analysis(trajectory, retrieval_note=..., gold_note=...)
-result   = label_arft(analysis["analysis"], api_key="sk-...")
+analysis = generate_analysis("path/to/trajectory_dir")        # Stage 1
+result   = label_arft(analysis["analysis"], api_key="sk-...")  # Stage 2
 
 for code in result["failure_modes"]:
     print(code, pattern_info(code)["name"])

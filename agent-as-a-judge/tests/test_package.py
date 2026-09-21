@@ -8,7 +8,6 @@ import json
 import os
 import subprocess
 import sys
-import textwrap
 
 import pytest
 
@@ -130,8 +129,58 @@ def test_traj_tools_replays_edits_onto_the_written_file(tmp_path):
     assert traj_tools.reconstruct_file(str(log), "m.py").strip() == "x = 2"
 
 
-def test_generate_analysis_warns_when_harness_facts_are_missing():
-    """Silently substituting a TODO placeholder would inject a false premise."""
-    with pytest.warns(UserWarning, match="retrieval_note"):
-        with pytest.raises((ValueError, SystemExit, RuntimeError)):
-            aae.generate_analysis({"task_id": None, "claude_log": "{}"})
+def test_harness_notes_have_usable_defaults():
+    """The defaults must be instructions, not placeholders.
+
+    They are quoted verbatim into every session, so a leftover TODO would become part
+    of the prompt. They also must not assert anything about the harness: telling an
+    analyst that a real search tool is mocked manufactures fabrication findings, and
+    the reverse credits calibration against literature never fetched.
+    """
+    from autoresearcheval import generate as gen
+    for note in (gen.RETRIEVAL_NOTE, gen.GOLD_NOTE):
+        assert "TODO" not in note
+        assert len(note) > 200
+    assert "has not been declared" in gen.RETRIEVAL_NOTE
+    assert "do not" in gen.RETRIEVAL_NOTE.lower()
+    assert "unless you actually" in gen.GOLD_NOTE
+
+
+def test_notes_reach_the_prompt():
+    from autoresearcheval import generate as gen
+    t = {"task_id": "t1", "reward": 0.0, "reason": "soft[x]", "category": "soft"}
+    prompt = gen.build_instruction(t, "m", "/tmp/out")
+    assert gen.RETRIEVAL_NOTE in prompt and gen.GOLD_NOTE in prompt
+
+
+def test_trajectory_accepts_dict_file_and_directory(tmp_path):
+    from autoresearcheval.api import _resolve_trajectory
+
+    record, path = _resolve_trajectory({"task_id": "inline", "claude_log": "{}"})
+    assert record["task_id"] == "inline" and path is None
+
+    one = tmp_path / "solo"
+    (one / "traj").mkdir(parents=True)
+    (one / "traj" / "a.json").write_text(json.dumps({"task_id": "a", "claude_log": "{}"}))
+    record, path = _resolve_trajectory(one)
+    assert record["task_id"] == "a" and path.name == "a.json"
+
+    record, path = _resolve_trajectory(one / "traj" / "a.json")
+    assert record["task_id"] == "a"
+
+
+def test_ambiguous_directory_points_at_the_batch_cli(tmp_path):
+    """Picking one of several arbitrarily would analyze a trajectory nobody named."""
+    many = tmp_path / "many"
+    (many / "traj").mkdir(parents=True)
+    for n in "ab":
+        (many / "traj" / f"{n}.json").write_text(json.dumps({"task_id": n, "claude_log": "{}"}))
+    from autoresearcheval.api import _resolve_trajectory
+    with pytest.raises(ValueError, match="aaj-generate --run-dir"):
+        _resolve_trajectory(many)
+
+
+def test_empty_directory_says_where_it_looked(tmp_path):
+    from autoresearcheval.api import _resolve_trajectory
+    with pytest.raises(FileNotFoundError, match="no trajectory JSON"):
+        _resolve_trajectory(tmp_path)

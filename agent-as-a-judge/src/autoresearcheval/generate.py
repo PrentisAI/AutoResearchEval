@@ -16,10 +16,11 @@ Each task:
   3. QA gate (analysis_qa.py); on fail -> status qa_fail, retried next --resume
      pass with the QA failure reasons fed back into the prompt.
 
-BEFORE RUNNING FOR REAL: edit RETRIEVAL_NOTE and GOLD_NOTE below to describe your own
-harness/benchmark's retrieval-tool reality and gold-value availability. The originals
-here are TODO placeholders — asserting the wrong thing (e.g. claiming a real WebSearch
-tool is a shim when it isn't) would inject a false premise into every analysis.
+RETRIEVAL_NOTE and GOLD_NOTE below tell the analyst what your harness's retrieval tools
+really do and whether gold values are reachable. They default to deriving both from the
+trajectory, so this runs correctly out of the box; override them only if you can state
+the truth, since a declared fact beats an inferred one and a wrong one is worse than
+neither.
 
 Usage:
   aaj-generate --run-dir /path/to/your_model__your_suite \
@@ -56,19 +57,37 @@ from . import analysis_qa
 DEFAULT_WORKROOT = str(Path(os.environ.get("AAJ_WORKROOT") or Path.cwd() / "_ws"))
 
 # ---------------------------------------------------------------------------------
-# ADAPT THESE TWO NOTES to your own harness before running for real. They get quoted
-# verbatim into every analysis session's instructions.
+# Quoted verbatim into every analysis session's instructions.
+#
+# These default to "work it out from the evidence" rather than to an assertion about
+# your harness, because asserting the wrong thing is worse than asserting nothing: an
+# analyst told that a real WebSearch is a shim will report fabricated retrieval that
+# never happened, and one told that a shim is real will credit calibration against
+# literature that was never fetched. Deriving it from the log is slightly weaker than
+# being told the truth, and much stronger than being told a falsehood.
+#
+# If you do know your harness's behaviour, say so — override these constants, or pass
+# retrieval_note=/gold_note= to generate_analysis(). A declared fact beats an inferred
+# one; that is the only reason to touch them.
 RETRIEVAL_NOTE = (
-    "TODO: describe whether WebSearch/WebFetch (or your harness's equivalent tools) "
-    "do real network I/O or are mocked/shimmed in the trajectories you're analyzing. "
-    "The analyst needs this to correctly judge retrieval honesty, citation "
-    "provenance, and possible answer contamination — guessing wrong in either "
-    "direction produces false findings."
+    "The retrieval tooling behind this trajectory has not been declared, so do not "
+    "assume in either direction. Work out from the log itself whether the "
+    "WebSearch/WebFetch (or equivalent) returns look like real network responses or "
+    "mocked/shimmed content: real ones fail in realistic ways (403s, paywalls, "
+    "redirects, rate limits, empty result sets) and vary in format, while shimmed ones "
+    "tend to be uniformly well-formed, uniformly on-topic, and never fail. State which "
+    "you concluded and the evidence for it. If it cannot be determined, judge citation "
+    "provenance on what is checkable — whether each cited DOI/arXiv id/title appears in "
+    "some retrieval return at all, versus being introduced in the report from nowhere — "
+    "and say explicitly that the retrieval substrate itself could not be verified."
 )
 GOLD_NOTE = (
-    "TODO: describe whether ground-truth/gold values are available locally for the "
-    "analyst to compare against, or whether it must rely on independent "
-    "recomputation, unit/magnitude sanity checks, and internal consistency instead."
+    "Assume no ground-truth or gold values are available locally unless you actually "
+    "find them in the workspace. Ground every numerical judgment in independent "
+    "recomputation from the agent's own delivered code, order-of-magnitude and unit "
+    "sanity checks, and internal consistency between the report, the decision artifact "
+    "and the execution log — a number that contradicts a table the agent itself printed "
+    "is a finding regardless of whether gold is available."
 )
 # ---------------------------------------------------------------------------------
 

@@ -20,7 +20,6 @@ import shutil
 import subprocess
 import tempfile
 import time
-import warnings
 from pathlib import Path
 
 import httpx
@@ -52,6 +51,33 @@ def all_patterns() -> dict:
     return {code: pattern_info(code) for code in _patterns.PATTERNS}
 
 
+def _resolve_trajectory(source):
+    """Accept a dict, a trajectory JSON, or a directory holding one.
+
+    A directory is checked for the ``traj/*.json`` layout the batch CLI expects first,
+    then for bare ``*.json`` at the top level. More than one match is an error rather
+    than a silent pick: running them serially here would drop the concurrency, resume
+    and QA-retry the batch CLI provides, and picking one arbitrarily would analyze a
+    trajectory the caller did not name.
+    """
+    if not isinstance(source, (str, Path)):
+        return dict(source), None
+
+    path = Path(source)
+    if path.is_dir():
+        found = sorted((path / "traj").glob("*.json")) or sorted(path.glob("*.json"))
+        if not found:
+            raise FileNotFoundError(
+                f"no trajectory JSON under {path} (looked in {path / 'traj'} and {path})")
+        if len(found) > 1:
+            raise ValueError(
+                f"{path} holds {len(found)} trajectories. generate_analysis() does one at "
+                f"a time; pass a single file, or use the batch CLI for the whole set:\n"
+                f"    aaj-generate --run-dir {path} --concurrency 4 --resume")
+        path = found[0]
+    return json.loads(path.read_text()), path
+
+
 # ---------------------------------------------------------------------------- stage 1
 def generate_analysis(
     trajectory,
@@ -74,16 +100,19 @@ def generate_analysis(
     returns the analysis it writes together with the QA gate's verdict.
 
     Args:
-        trajectory: a trajectory record as a dict, or a path to a JSON file holding one.
-            It needs a ``task_id`` and a log field ``traj_tools.detect_format`` knows
+        trajectory: a trajectory record as a dict, a path to a JSON file holding one, or
+            a directory containing one (``<dir>/traj/*.json`` or ``<dir>/*.json``). It
+            needs a ``task_id`` and a log field ``traj_tools.detect_format`` knows
             (Claude Code stream-JSON, Gemini CLI NDJSON, or Codex CLI JSONL).
         task_id: overrides the record's own ``task_id``.
         retrieval_note: what the harness's retrieval tools really did — whether
-            WebSearch/WebFetch performed real network I/O or were mocked. The analyst
-            cannot judge citation provenance or answer contamination without this, and
-            guessing wrong in either direction manufactures findings.
-        gold_note: whether ground-truth values are available locally, or whether the
-            analyst must rely on recomputation and internal consistency.
+            WebSearch/WebFetch performed real network I/O or were mocked. Optional: the
+            default tells the analyst to work it out from the log and report which it
+            concluded. Pass it only when you can state the truth, since a wrong
+            assertion here manufactures findings in either direction.
+        gold_note: whether ground-truth values are reachable. Optional; the default
+            assumes none and grounds every numerical judgment in recomputation, unit and
+            magnitude checks, and internal consistency.
         model, effort, max_turns, timeout: passed through to the session.
         claude_bin: path to the ``claude`` CLI; auto-detected when omitted.
         workspace: where to build the per-task workspace. A temporary directory is used
@@ -99,21 +128,11 @@ def generate_analysis(
     Raises:
         RuntimeError: the session produced no analysis at all.
     """
-    for label, note in (("retrieval_note", retrieval_note), ("gold_note", gold_note)):
-        if note is None:
-            warnings.warn(
-                f"{label} not given, so the session is told a TODO placeholder instead of "
-                f"what your harness actually does. Retrieval reality and gold availability "
-                f"change what counts as a finding; pass both for trustworthy output.",
-                UserWarning, stacklevel=2)
-
-    if isinstance(trajectory, (str, Path)):
-        traj_path = Path(trajectory)
-        record = json.loads(traj_path.read_text())
-        tmp_json = None
-    else:
-        record = dict(trajectory)
-        tmp_json = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
+    record, traj_path = _resolve_trajectory(trajectory)
+    tmp_json = None
+    if traj_path is None:                       # given a dict: the workspace extractor
+        tmp_json = tempfile.NamedTemporaryFile(  # reads from disk, so stage it there
+            "w", suffix=".json", delete=False)
         json.dump(record, tmp_json)
         tmp_json.close()
         traj_path = Path(tmp_json.name)

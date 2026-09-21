@@ -12,18 +12,16 @@ raw trajectory log  --[Stage 1]-->  analysis.md  --[Stage 2]-->  ARFT labels
 ```python
 from autoresearcheval import generate_analysis, label_arft, pattern_info
 
-analysis = generate_analysis(
-    trajectory,                       # a dict, or a path to one trajectory JSON
-    retrieval_note="WebSearch is a shim here; only WebFetch does real network I/O.",
-    gold_note="No gold values locally — recompute and check internal consistency.",
-)
-
-result = label_arft(analysis["analysis"], api_key="sk-...")
+analysis = generate_analysis("path/to/trajectory_dir")        # Stage 1
+result   = label_arft(analysis["analysis"], api_key="sk-...")  # Stage 2
 
 print(result["summary"], result["total_failures"])
 for code in result["failure_modes"]:
     print(code, pattern_info(code)["name"])
 ```
+
+A trajectory directory (or a single trajectory JSON, or a dict) and an API key are all
+that is required.
 
 **Stage 1** spawns one fresh Claude Code session per trajectory to write a deep,
 ONBOARDING-conformant `analysis.md` — a structured, six-stage critique (ideation,
@@ -84,10 +82,19 @@ the analysis came back thinner than the framework's bar, not that the call faile
 `total_failures`, and `qa` (the schema-and-polarity gate). Each hit carries its `code`,
 `name`, `stage`, `pillar`, `root_cause`, `confidence`, `evidence` and `why`.
 
-> **Pass `retrieval_note` and `gold_note`.** They tell the analyst what your harness's
-> retrieval tools actually did and whether gold values are reachable. Omit them and the
-> session is handed a TODO placeholder instead, which injects a false premise into every
-> finding — the call warns when you do.
+### Telling the analyst about your harness
+
+Two facts change what counts as a finding: whether the harness's retrieval tools did
+real network I/O or were mocked, and whether gold values are reachable locally. By
+default the analyst is told to **work both out from the trajectory** and report what it
+concluded — so the defaults are correct for any harness and nothing needs editing.
+
+Override them with `retrieval_note=` / `gold_note=` (or the `RETRIEVAL_NOTE` /
+`GOLD_NOTE` constants for the batch CLI) **only if you can state the truth**. A declared
+fact beats an inferred one, but a wrong one is worse than neither: an analyst told that
+a real search tool is mocked will report fabricated retrieval that never happened, and
+one told that a shim is real will credit calibration against literature that was never
+fetched.
 
 ## Batch CLIs
 
@@ -98,10 +105,6 @@ The commands that produced the paper's corpus install alongside the library:
 ## Quickstart — Stage 1: trajectory → analysis.md
 
 ```bash
-# The library call takes the harness facts as arguments; the batch CLI reads them from
-# RETRIEVAL_NOTE / GOLD_NOTE at the top of autoresearcheval/generate.py, which ship as
-# TODO placeholders. Edit them before a real run.
-
 aaj-generate --run-dir /path/to/your_model__your_suite \
     --concurrency 4 --resume --model claude-opus-4-8
 ```
